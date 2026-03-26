@@ -1065,6 +1065,11 @@ input[type="range"]::-webkit-slider-thumb {
       maxZoom: 18,
     }).addTo(map);
     mapInitialized = true;
+    map.on('moveend', function() {
+      if (currentCategory) {
+        filterByMapBounds();
+      }
+    });
   }
 
   function clearMapLayers() {
@@ -1496,17 +1501,31 @@ input[type="range"]::-webkit-slider-thumb {
 
     renderResults();
     renderMarkers();
+    filterByMapBounds();
+  }
+
+  // Filter the list to only show items visible on the map
+  let visibleFiltered = [];
+  function filterByMapBounds() {
+    if (!map || !currentCategory) return;
+    const bounds = map.getBounds();
+    visibleFiltered = filtered.filter(item => bounds.contains([item.lat, item.lon]));
+    displayCount = 50;
+    renderResults();
     updateResultCount();
   }
 
   function updateResultCount() {
     const cfg = CATEGORIES[currentCategory];
-    resultCount.innerHTML = '<strong style="color:' + cfg.colorHex + '">' + filtered.length + '</strong> találat';
+    const total = visibleFiltered.length;
+    const all = filtered.length;
+    const extra = total < all ? ' <span style="font-size:.75rem;color:#999">(térképen ' + total + ' / összesen ' + all + ')</span>' : '';
+    resultCount.innerHTML = '<strong style="color:' + cfg.colorHex + '">' + total + '</strong> találat' + extra;
   }
 
   // =========== RENDER RESULTS (generic) ===========
   function renderResults() {
-    const showing = filtered.slice(0, displayCount);
+    const showing = visibleFiltered.slice(0, displayCount);
     const cfg = CATEGORIES[currentCategory];
     let html = '';
 
@@ -1550,8 +1569,8 @@ input[type="range"]::-webkit-slider-thumb {
       '</div>';
     });
 
-    if (filtered.length > displayCount) {
-      html += '<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (' + (filtered.length - displayCount) + ' hátra)</button>';
+    if (visibleFiltered.length > displayCount) {
+      html += '<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (' + (visibleFiltered.length - displayCount) + ' hátra)</button>';
     }
     resultsList.innerHTML = html;
   }
