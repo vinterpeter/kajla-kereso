@@ -689,15 +689,72 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   // Normalize items
+  // Parse coordinate that might contain "lat, lon" in a single field
+  function parseCoord(val) {
+    if (!val) return NaN;
+    const s = String(val).split(',')[0].trim();
+    return parseFloat(s);
+  }
+  function parseLon(item) {
+    const latStr = String(item.lat || '');
+    if (latStr.includes(',')) {
+      const parts = latStr.split(',');
+      if (parts.length >= 2) { const v = parseFloat(parts[1].trim()); if (!isNaN(v)) return v; }
+    }
+    return parseCoord(item.lon);
+  }
+
+  // Haversine distance in km
+  function distKm(lat1, lon1, lat2, lon2) {
+    const R = 6371, toRad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toRad) * Math.cos(lat2*toRad) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.asin(Math.sqrt(a));
+  }
+
   function processData(data) {
     const items = [];
     const counties = new Set();
 
+    // First pass: collect all coordinates per zip code for median calculation
+    const zipCoords = {};
+    for (const ds of [data.tripsData, data.stampsData, data.discountsData]) {
+      (ds || []).forEach(item => {
+        const z = item.zip;
+        const lat = parseCoord(item.lat || item.trip_lat);
+        const lon = item.trip_lon ? parseCoord(item.trip_lon) : parseLon(item);
+        if (z && lat > 45 && lat < 49 && lon > 16 && lon < 23) {
+          if (!zipCoords[z]) zipCoords[z] = [];
+          zipCoords[z].push([lat, lon]);
+        }
+      });
+    }
+    // Calculate median per zip
+    const zipMedian = {};
+    for (const [z, coords] of Object.entries(zipCoords)) {
+      const lats = coords.map(c => c[0]).sort((a,b) => a-b);
+      const lons = coords.map(c => c[1]).sort((a,b) => a-b);
+      const mid = Math.floor(coords.length / 2);
+      zipMedian[z] = [lats[mid], lons[mid]];
+    }
+
+    // Correct coordinates: if >15km from zip median, use zip median instead
+    function correctCoords(lat, lon, zip) {
+      if (zip && zipMedian[zip]) {
+        const [mLat, mLon] = zipMedian[zip];
+        if (distKm(lat, lon, mLat, mLon) > 15) {
+          return { lat: mLat, lon: mLon };
+        }
+      }
+      return { lat, lon };
+    }
+
     (data.tripsData || []).forEach(t => {
       if (t.active !== 1 || t.status !== 1) return;
-      const lat = parseFloat(t.lat || t.trip_lat);
-      const lon = parseFloat(t.lon || t.trip_lon);
+      let lat = parseCoord(t.lat || t.trip_lat);
+      let lon = t.trip_lon ? parseCoord(t.trip_lon) : parseLon(t);
       if (isNaN(lat) || isNaN(lon)) return;
+      ({ lat, lon } = correctCoords(lat, lon, t.zip));
       if (t.county) counties.add(t.county);
       items.push({
         _type: 'trip',
@@ -719,9 +776,10 @@ input[type="range"]::-webkit-slider-thumb {
 
     (data.stampsData || []).forEach(s => {
       if (s.active !== 1 || s.status !== 1) return;
-      const lat = parseFloat(s.lat);
-      const lon = parseFloat(s.lon);
+      let lat = parseCoord(s.lat);
+      let lon = parseLon(s);
       if (isNaN(lat) || isNaN(lon)) return;
+      ({ lat, lon } = correctCoords(lat, lon, s.zip));
       if (s.county) counties.add(s.county);
       items.push({
         _type: 'stamp',
@@ -738,9 +796,10 @@ input[type="range"]::-webkit-slider-thumb {
 
     (data.discountsData || []).forEach(d => {
       if (d.active !== 1 || d.status !== 1) return;
-      const lat = parseFloat(d.lat);
-      const lon = parseFloat(d.lon);
+      let lat = parseCoord(d.lat);
+      let lon = parseLon(d);
       if (isNaN(lat) || isNaN(lon)) return;
+      ({ lat, lon } = correctCoords(lat, lon, d.zip));
       if (d.county) counties.add(d.county);
       items.push({
         _type: 'discount',
