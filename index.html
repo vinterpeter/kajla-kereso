@@ -27,6 +27,8 @@
   --purple-light: #f3e0f0;
   --red: #c0392b;
   --red-light: #fce4e4;
+  --teal: #1a9988;
+  --teal-light: #e0f5f2;
   --shadow: 0 2px 12px rgba(0,0,0,.12);
   --radius: 10px;
   --transition: .25s ease;
@@ -63,7 +65,155 @@ body {
   font-size: 1.4rem; flex-shrink: 0;
 }
 
-.main { display: flex; flex: 1; overflow: hidden; }
+.back-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.15);
+  border: 1.5px solid rgba(255,255,255,.3);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.back-btn:hover { background: rgba(255,255,255,.25); }
+.back-btn.visible { display: inline-flex; }
+
+.main-content { flex: 1; overflow: hidden; position: relative; }
+
+/* ===================== */
+/* STEP 1: CATEGORY GRID */
+/* ===================== */
+.category-screen {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  background: linear-gradient(160deg, var(--earth-pale) 0%, #fff 100%);
+  z-index: 10;
+  transition: opacity .35s ease, transform .35s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 60px;
+}
+.category-screen.hidden {
+  opacity: 0;
+  transform: scale(.97);
+  pointer-events: none;
+}
+
+.category-screen .hero-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--green-dark);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.category-screen .hero-sub {
+  font-size: 1rem;
+  color: var(--earth-mid);
+  text-align: center;
+  margin-bottom: 36px;
+  max-width: 500px;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  max-width: 960px;
+  width: 100%;
+}
+
+.cat-tile {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.cat-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+.cat-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+}
+.cat-tile .icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.cat-tile .tile-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.cat-tile .tile-count {
+  font-size: .82rem;
+  font-weight: 600;
+  opacity: .7;
+}
+.cat-tile .tile-desc {
+  font-size: .88rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Category-specific colors */
+.cat-tile[data-cat="trips"]::before { background: var(--green-mid); }
+.cat-tile[data-cat="trips"]:hover { border-color: var(--green-mid); }
+.cat-tile[data-cat="trips"] .tile-name { color: var(--green-dark); }
+.cat-tile[data-cat="trips"] .tile-count { color: var(--green-mid); }
+
+.cat-tile[data-cat="bringa"]::before { background: var(--teal); }
+.cat-tile[data-cat="bringa"]:hover { border-color: var(--teal); }
+.cat-tile[data-cat="bringa"] .tile-name { color: #14796c; }
+.cat-tile[data-cat="bringa"] .tile-count { color: var(--teal); }
+
+.cat-tile[data-cat="adventures"]::before { background: var(--red); }
+.cat-tile[data-cat="adventures"]:hover { border-color: var(--red); }
+.cat-tile[data-cat="adventures"] .tile-name { color: var(--red); }
+.cat-tile[data-cat="adventures"] .tile-count { color: var(--red); }
+
+.cat-tile[data-cat="castles"]::before { background: var(--purple); }
+.cat-tile[data-cat="castles"]:hover { border-color: var(--purple); }
+.cat-tile[data-cat="castles"] .tile-name { color: var(--purple); }
+.cat-tile[data-cat="castles"] .tile-count { color: var(--purple); }
+
+.cat-tile[data-cat="stamps"]::before { background: var(--blue); }
+.cat-tile[data-cat="stamps"]:hover { border-color: var(--blue); }
+.cat-tile[data-cat="stamps"] .tile-name { color: var(--blue); }
+.cat-tile[data-cat="stamps"] .tile-count { color: var(--blue); }
+
+/* ===================== */
+/* STEP 2: DETAIL VIEW   */
+/* ===================== */
+.detail-view {
+  position: absolute; inset: 0;
+  display: flex;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease;
+}
+.detail-view.active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 15;
+}
 
 .sidebar {
   width: 420px; min-width: 420px;
@@ -71,15 +221,26 @@ body {
   display: flex; flex-direction: column;
   border-right: 1px solid #e0ddd5;
   z-index: 500;
-  transition: var(--transition);
 }
 
 .map-container { flex: 1; position: relative; }
 #map { width: 100%; height: 100%; }
 
+/* ---- SIDEBAR HEADER (category badge) ---- */
+.sidebar-cat-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.sidebar-cat-header .cat-icon { font-size: 1.3rem; }
+.sidebar-cat-header .cat-title { font-size: 1.05rem; font-weight: 700; }
+.sidebar-cat-header .cat-count { font-size: .8rem; opacity: .6; }
+
 /* ---- FILTERS ---- */
 .filters {
-  padding: 16px 18px;
+  padding: 12px 18px;
   border-bottom: 1px solid #eee;
   background: var(--earth-pale);
   overflow-y: auto;
@@ -89,7 +250,7 @@ body {
 
 .search-box {
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .search-box input {
   width: 100%;
@@ -125,26 +286,6 @@ body {
   margin-bottom: 2px;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: .8rem;
-  cursor: pointer;
-  border: 2px solid #ddd;
-  background: #fff;
-  transition: all var(--transition);
-  user-select: none;
-}
-.chip.active-green { border-color: var(--green-mid); background: var(--green-pale); color: var(--green-dark); }
-.chip.active-blue { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-.chip.active-orange { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
-.chip.active-purple { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
-.chip.active-red { border-color: var(--red); background: var(--red-light); color: var(--red); }
-.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
-
 select.filter-select {
   padding: 7px 10px;
   border: 2px solid #ddd;
@@ -159,26 +300,70 @@ select.filter-select {
 }
 select.filter-select:focus { border-color: var(--green-mid); }
 
-/* Trip-specific filters */
-.trip-filters {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: .8rem;
+  cursor: pointer;
+  border: 2px solid #ddd;
+  background: #fff;
+  transition: all var(--transition);
+  user-select: none;
 }
-.trip-filters.visible { display: flex; }
+.chip:hover { border-color: #bbb; }
+.chip.active { font-weight: 600; }
 
-.adventure-filters {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
+.amenity-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.adventure-filters.visible { display: flex; }
-.quest-select-area {
-  margin-top: 8px;
+.amenity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: .75rem;
+  cursor: pointer;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  transition: all var(--transition);
+  user-select: none;
 }
-.quest-select-area .filter-label { margin-bottom: 4px; }
+.amenity-chip.active {
+  border-color: var(--green-mid);
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+
+.difficulty-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.difficulty-display span { font-size: .8rem; color: #666; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  cursor: pointer;
+}
+
+/* Quest chips */
 .quest-chip {
   display: inline-flex;
   align-items: center;
@@ -201,11 +386,7 @@ select.filter-select:focus { border-color: var(--green-mid); }
   color: #fff;
   font-weight: 600;
 }
-.adventure-info {
-  margin-top: 10px;
-  display: none;
-}
-.adventure-info.visible { display: block; }
+
 .adventure-info .quest-title {
   font-size: .88rem;
   font-weight: 700;
@@ -250,53 +431,7 @@ select.filter-select:focus { border-color: var(--green-mid); }
 }
 .station-list li:last-child { border-bottom: none; }
 
-.difficulty-display {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.difficulty-display span { font-size: .8rem; color: #666; }
-
-input[type="range"] {
-  -webkit-appearance: none;
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: #ddd;
-  outline: none;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  background: var(--green-mid);
-  cursor: pointer;
-}
-
-.amenity-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.amenity-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: .75rem;
-  cursor: pointer;
-  border: 1.5px solid #ddd;
-  background: #fff;
-  transition: all var(--transition);
-  user-select: none;
-}
-.amenity-chip.active {
-  border-color: var(--green-mid);
-  background: var(--green-pale);
-  color: var(--green-dark);
-}
-
+/* ---- RESULT COUNT ---- */
 .result-count {
   padding: 8px 18px;
   font-size: .8rem;
@@ -305,7 +440,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
-.result-count strong { color: var(--green-dark); }
+.result-count strong { font-weight: 700; }
 
 /* ---- RESULTS LIST ---- */
 .results-wrapper {
@@ -332,8 +467,8 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 12px;
   align-items: flex-start;
 }
-.result-card:hover { border-color: var(--green-light); box-shadow: var(--shadow); transform: translateY(-1px); }
-.result-card.selected { border-color: var(--green-mid); background: var(--green-pale); }
+.result-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.result-card.selected { box-shadow: var(--shadow); }
 
 .card-thumb {
   width: 64px; height: 64px;
@@ -355,24 +490,11 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: .5px;
   margin-bottom: 4px;
 }
-.badge-trip { background: var(--green-pale); color: var(--green-dark); }
-.badge-stamp { background: var(--blue-light); color: var(--blue); }
-.badge-discount { background: var(--orange-light); color: var(--orange); }
-.badge-castle { background: var(--purple-light); color: var(--purple); }
-.badge-adventure { background: var(--red-light); color: var(--red); }
 
 .card-name {
   font-size: .9rem;
   font-weight: 600;
   color: #222;
-  margin-bottom: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.card-venue {
-  font-size: .78rem;
-  color: #888;
   margin-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -395,16 +517,56 @@ input[type="range"]::-webkit-slider-thumb {
   width: 100%;
   padding: 12px;
   margin: 8px 0 16px;
-  border: 2px dashed var(--green-mid);
+  border: 2px dashed #aaa;
   border-radius: var(--radius);
   background: transparent;
-  color: var(--green-mid);
+  color: #666;
   font-weight: 600;
   font-size: .85rem;
   cursor: pointer;
   transition: all var(--transition);
 }
-.load-more-btn:hover { background: var(--green-pale); }
+.load-more-btn:hover { background: #f5f5f0; }
+
+/* Bringa detail extras */
+.bringa-stamps-list {
+  list-style: none;
+  padding: 0;
+}
+.bringa-stamps-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: .84rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.bringa-stamps-list li:hover { color: var(--teal); }
+.bringa-stamps-list li::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex-shrink: 0;
+}
+.bringa-stamps-list li:last-child { border-bottom: none; }
+
+.bringa-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: var(--teal);
+  color: #fff;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 600;
+  transition: opacity var(--transition);
+  margin-top: 6px;
+}
+.bringa-link:hover { opacity: .85; }
 
 /* ---- DETAIL PANEL ---- */
 .detail-overlay {
@@ -439,7 +601,6 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
   color: #fff;
   flex-shrink: 0;
 }
@@ -472,10 +633,9 @@ input[type="range"]::-webkit-slider-thumb {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .5px;
-  color: var(--green-dark);
   margin-bottom: 6px;
   padding-bottom: 4px;
-  border-bottom: 2px solid var(--green-pale);
+  border-bottom: 2px solid #eee;
 }
 .detail-section p, .detail-section div { font-size: .88rem; line-height: 1.6; color: #444; }
 
@@ -522,12 +682,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .detail-video a:hover { opacity: .85; }
 
-.detail-link a {
-  color: var(--green-mid);
-  text-decoration: underline;
-  font-size: .85rem;
-}
-
 .detail-reviews { display: flex; flex-direction: column; gap: 8px; }
 .review-item {
   padding: 10px;
@@ -546,7 +700,6 @@ input[type="range"]::-webkit-slider-thumb {
 .popup-btn {
   display: inline-block;
   padding: 5px 14px;
-  background: var(--green-mid);
   color: #fff;
   border-radius: 16px;
   text-decoration: none;
@@ -555,11 +708,21 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   border: none;
 }
-.popup-btn:hover { background: var(--green-dark); }
+.popup-btn:hover { opacity: .85; }
 
-.marker-trip { background-color: var(--green-mid); }
-.marker-stamp { background-color: var(--blue); }
-.marker-discount { background-color: var(--orange); }
+/* Numbered adventure markers */
+.adv-number-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: .75rem;
+  border: 2.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
 
 /* ---- MOBILE ---- */
 @media (max-width: 800px) {
@@ -568,7 +731,16 @@ input[type="range"]::-webkit-slider-thumb {
   .header .subtitle { display: none; }
   .header .logo-icon { width: 32px; height: 32px; font-size: 1.1rem; }
 
-  .main { flex-direction: column; position: relative; }
+  .category-screen { padding: 24px 16px 40px; }
+  .category-screen .hero-title { font-size: 1.3rem; }
+  .category-screen .hero-sub { font-size: .88rem; margin-bottom: 24px; }
+  .cat-grid { grid-template-columns: 1fr; gap: 14px; }
+  .cat-tile { padding: 20px 18px; flex-direction: row; align-items: center; gap: 14px; }
+  .cat-tile .icon { font-size: 2rem; }
+  .cat-tile .tile-name { font-size: 1.05rem; }
+  .cat-tile .tile-desc { font-size: .82rem; }
+
+  .detail-view { flex-direction: column; }
   .map-container { flex: 1; min-height: 0; }
 
   .sidebar {
@@ -585,11 +757,8 @@ input[type="range"]::-webkit-slider-thumb {
     box-shadow: 0 -4px 20px rgba(0,0,0,.15);
     transition: height .3s ease, transform .3s ease;
   }
-  .sidebar.collapsed {
-    height: 54px;
-  }
+  .sidebar.collapsed { height: 54px; }
 
-  /* Drag handle */
   .sidebar::before {
     content: '';
     display: block;
@@ -611,27 +780,20 @@ input[type="range"]::-webkit-slider-thumb {
   .filters .filter-label { font-size: .68rem; margin-bottom: 1px; }
 
   .chip { padding: 4px 9px; font-size: .72rem; border-width: 1.5px; }
-  .chip .dot { width: 6px; height: 6px; }
-
-  .trip-filters { gap: 5px; }
-  .adventure-filters { gap: 5px; }
   .quest-chip { padding: 3px 8px; font-size: .68rem; }
   .station-list li { font-size: .76rem; padding: 6px 0; }
   .station-list li::before { min-width: 20px; height: 20px; font-size: .62rem; }
-  .adventure-info .quest-title { font-size: .82rem; }
-  .adventure-info .quest-desc { font-size: .74rem; }
   .amenity-chip { padding: 3px 8px; font-size: .68rem; }
 
   select.filter-select { padding: 5px 8px; font-size: .78rem; }
 
   .result-count { padding: 5px 12px; font-size: .75rem; }
-
   .results-list { padding: 6px 10px; gap: 6px; }
   .result-card { padding: 10px; gap: 8px; }
   .card-thumb { width: 48px; height: 48px; border-radius: 6px; }
   .card-name { font-size: .82rem; }
   .card-badge { font-size: .6rem; padding: 1px 6px; }
-  .card-venue, .card-location { font-size: .72rem; }
+  .card-location { font-size: .72rem; }
 
   .detail-panel { width: 100vw; }
   .detail-header { padding: 12px 16px; }
@@ -642,8 +804,9 @@ input[type="range"]::-webkit-slider-thumb {
   .detail-images { grid-template-columns: 1fr 1fr; gap: 6px; }
 
   .leaflet-popup-content { margin: 8px 12px !important; font-size: .8rem; }
-
   .load-more-btn { padding: 10px; font-size: .8rem; margin: 6px 0 12px; }
+
+  .back-btn { padding: 5px 10px; font-size: .78rem; }
 }
 
 /* ---- LOADING ---- */
@@ -679,106 +842,48 @@ input[type="range"]::-webkit-slider-thumb {
 
 <div class="loading-screen" id="loadingScreen">
   <div class="loader"></div>
-  <p>Kajla adatok betoltese...</p>
+  <p>Kajla adatok betöltése...</p>
 </div>
 
 <div class="app">
   <header class="header">
-    <div class="logo-icon">🐾</div>
+    <div class="logo-icon">&#128062;</div>
+    <button class="back-btn" id="backBtn" onclick="window._goHome()">&#8592; Vissza</button>
     <div>
       <h1>Kajla Célpont Kereső</h1>
       <div class="subtitle">Fedezd fel Magyarország legszebb családi kirándulásait!</div>
     </div>
   </header>
 
-  <div class="main">
-    <aside class="sidebar">
-      <div class="filters">
-        <div class="search-box">
-          <span class="search-icon">&#128269;</span>
-          <input type="text" id="searchInput" placeholder="Keresés név, város, vármegye vagy leírás alapján...">
-        </div>
+  <div class="main-content">
+    <!-- STEP 1: Category selection -->
+    <div class="category-screen" id="categoryScreen">
+      <div class="hero-title">Válassz kategóriát!</div>
+      <div class="hero-sub">Fedezd fel a Kajla családbarát kirándulási élményeit egész Magyarországon.</div>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
 
-        <div class="filter-row">
-          <div class="filter-label">Tipus</div>
-          <label class="chip active-green" id="chipTrip" data-type="trip">
-            <span class="dot" style="background:var(--green-mid)"></span> Túrák
-          </label>
-          <label class="chip active-blue" id="chipStamp" data-type="stamp">
-            <span class="dot" style="background:var(--blue)"></span> Pecsételő helyek
-          </label>
-          <label class="chip active-orange" id="chipDiscount" data-type="discount">
-            <span class="dot" style="background:var(--orange)"></span> Kedvezmények
-          </label>
-          <label class="chip active-purple" id="chipCastle" data-type="castle">
-            <span class="dot" style="background:var(--purple)"></span> Várak és kastélyok
-          </label>
-          <label class="chip active-red" id="chipAdventure" data-type="adventure">
-            <span class="dot" style="background:var(--red)"></span> Kalandok
-          </label>
+    <!-- STEP 2: Category detail (sidebar + map) -->
+    <div class="detail-view" id="detailView">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-cat-header" id="sidebarCatHeader"></div>
+        <div class="filters" id="filtersArea"></div>
+        <div class="result-count" id="resultCount"></div>
+        <div class="results-wrapper" id="resultsWrapper">
+          <div class="results-list" id="resultsList"></div>
         </div>
-
-        <div class="adventure-filters" id="adventureFilters">
-          <div class="filter-label">Kalandkönyv</div>
-          <select id="adventureSelect" class="filter-select">
-            <option value="">Válassz kalandkönyvet...</option>
-          </select>
-          <div id="questSelect" class="quest-select-area"></div>
-          <div id="adventureInfo" class="adventure-info"></div>
-        </div>
-
-        <div class="filter-row">
-          <div class="filter-label">Vármegye</div>
-          <select id="countySelect" class="filter-select">
-            <option value="">Összes vármegye</option>
-          </select>
-        </div>
-
-        <div class="trip-filters" id="tripFilters">
-          <div class="filter-label">Túra szűrők</div>
-          <div class="filter-row" style="gap:12px">
-            <div style="flex:1">
-              <span style="font-size:.78rem;color:#666">Nehézség (max):</span>
-              <div class="difficulty-display">
-                <input type="range" id="difficultySlider" min="1" max="5" value="5" step="1">
-                <span id="difficultyLabel">🐾🐾🐾🐾🐾</span>
-              </div>
-            </div>
-            <div style="flex:1">
-              <span style="font-size:.78rem;color:#666">Max időtartam (óra):</span>
-              <div class="difficulty-display">
-                <input type="range" id="durationSlider" min="1" max="10" value="10" step="1">
-                <span id="durationLabel">10 óra</span>
-              </div>
-            </div>
-          </div>
-          <div class="filter-label" style="margin-top:4px">Szolgáltatások</div>
-          <div class="amenity-toggles" id="amenityToggles">
-            <span class="amenity-chip" data-amenity="toilet">&#128701; WC</span>
-            <span class="amenity-chip" data-amenity="parking">&#127359; Parkoló</span>
-            <span class="amenity-chip" data-amenity="buffet">&#127828; Büfé</span>
-            <span class="amenity-chip" data-amenity="dog_allowed">&#128054; Kutyabarát</span>
-            <span class="amenity-chip" data-amenity="carriage">&#128118; Babakocsival járható</span>
-          </div>
-        </div>
+      </aside>
+      <div class="map-container">
+        <div id="map"></div>
       </div>
-
-      <div class="result-count" id="resultCount">Betöltés...</div>
-
-      <div class="results-wrapper" id="resultsWrapper">
-        <div class="results-list" id="resultsList"></div>
-      </div>
-    </aside>
-
-    <div class="map-container">
-      <div id="map"></div>
     </div>
   </div>
 </div>
 
+<!-- Detail Panel (slide-in) -->
 <div class="detail-overlay" id="detailOverlay"></div>
 <div class="detail-panel" id="detailPanel">
-  <div class="detail-header">
+  <div class="detail-header" id="detailHeader">
     <h2 id="detailTitle"></h2>
     <button class="detail-close" id="detailClose">&times;</button>
   </div>
@@ -791,107 +896,114 @@ input[type="range"]::-webkit-slider-thumb {
 (function() {
   'use strict';
 
-  // State
+  // =========== STATE ===========
+  let rawData = null;
+  let currentCategory = null; // 'trips' | 'bringa' | 'adventures' | 'castles' | 'stamps'
   let allItems = [];
   let filtered = [];
   let displayCount = 50;
   let selectedId = null;
-  let map, tripLayer, stampCluster, discountLayer, castleLayer, adventureCluster;
+  let map, markerLayer, clusterLayer;
   let markerMap = {};
+  let mapInitialized = false;
 
-  // Type toggle state
-  const typeState = { trip: true, stamp: true, discount: true, castle: true, adventure: true };
-  // Amenity filter state
-  const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
-  // Adventure filter state
-  let selectedAdventure = null; // slug of selected adventure book
-  let selectedQuest = null; // quest name within adventure
-  let adventureItems = []; // all adventure items for lookup
+  // Category-specific filter state
+  let filterState = {};
+
+  // Category config
+  const CATEGORIES = {
+    trips: {
+      icon: "\u{1F97E}", name: "Kajla-körök",
+      desc: "42 családbarát túra természetjáró ösvényeken, parkokban és arborétumokban szerte az országban.",
+      color: '--green-mid', colorHex: '#4a8c3f', darkHex: '#2d5a27', lightHex: '#e8f5e3',
+      headerGrad: 'linear-gradient(135deg, #2d5a27, #4a8c3f)',
+    },
+    bringa: {
+      icon: "\u{1F6B4}", name: "Bringakörök",
+      desc: "10 bringakör a Balaton körül, pecsételő helyekkel és útvonaltervvel.",
+      color: '--teal', colorHex: '#1a9988', darkHex: '#14796c', lightHex: '#e0f5f2',
+      headerGrad: 'linear-gradient(135deg, #14796c, #1a9988)',
+    },
+    adventures: {
+      icon: "\u{1F5FA}\uFE0F", name: "Kalandok",
+      desc: "11 városfelfedező kalandkönyv rejtvényekkel és állomásokkal.",
+      color: '--red', colorHex: '#c0392b', darkHex: '#962d22', lightHex: '#fce4e4',
+      headerGrad: 'linear-gradient(135deg, #962d22, #c0392b)',
+    },
+    castles: {
+      icon: "\u{1F3F0}", name: "Várak és kastélyok",
+      desc: "22 mesebeli vár és kastély felfedezésre várva.",
+      color: '--purple', colorHex: '#9b2d86', darkHex: '#7a2369', lightHex: '#f3e0f0',
+      headerGrad: 'linear-gradient(135deg, #7a2369, #9b2d86)',
+    },
+    stamps: {
+      icon: "\u{1F4CD}", name: "Pecsételő helyek",
+      desc: "890 pecsételő pont az ország minden szegletében.",
+      color: '--blue', colorHex: '#3a7ec8', darkHex: '#2c5f96', lightHex: '#e0eef8',
+      headerGrad: 'linear-gradient(135deg, #2c5f96, #3a7ec8)',
+    },
+  };
 
   // DOM refs
   const $ = id => document.getElementById(id);
-  const searchInput = $('searchInput');
-  const countySelect = $('countySelect');
-  const difficultySlider = $('difficultySlider');
-  const durationSlider = $('durationSlider');
-  const difficultyLabel = $('difficultyLabel');
-  const durationLabel = $('durationLabel');
-  const tripFilters = $('tripFilters');
+  const categoryScreen = $('categoryScreen');
+  const detailView = $('detailView');
+  const backBtn = $('backBtn');
+  const catGrid = $('catGrid');
+  const sidebarCatHeader = $('sidebarCatHeader');
+  const filtersArea = $('filtersArea');
   const resultCount = $('resultCount');
   const resultsList = $('resultsList');
   const resultsWrapper = $('resultsWrapper');
   const detailOverlay = $('detailOverlay');
   const detailPanel = $('detailPanel');
+  const detailHeader = $('detailHeader');
   const detailTitle = $('detailTitle');
   const detailContent = $('detailContent');
   const detailClose = $('detailClose');
   const loadingScreen = $('loadingScreen');
 
+  // =========== HELPERS ===========
+  function esc(str) {
+    if (!str) return '';
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+  }
+  function formatDesc(str) {
+    if (!str) return '';
+    return str.replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+  }
+  function formatPlain(str) {
+    if (!str) return '';
+    return '<p>' + esc(str.replace(/\r\n/g, '\n')).replace(/\n/g, '<br>') + '</p>';
+  }
+
   // Marker icon factory
   function makeIcon(color) {
     return L.divIcon({
       className: '',
-      html: `<svg width="26" height="36" viewBox="0 0 26 36" xmlns="http://www.w3.org/2000/svg">
-        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 23 13 23s13-13.25 13-23C26 5.82 20.18 0 13 0z" fill="${color}"/>
-        <circle cx="13" cy="12" r="5.5" fill="#fff" opacity=".9"/>
-      </svg>`,
+      html: '<svg width="26" height="36" viewBox="0 0 26 36" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 23 13 23s13-13.25 13-23C26 5.82 20.18 0 13 0z" fill="' + color + '"/>' +
+        '<circle cx="13" cy="12" r="5.5" fill="#fff" opacity=".9"/>' +
+        '</svg>',
       iconSize: [26, 36],
       iconAnchor: [13, 36],
       popupAnchor: [0, -34],
     });
   }
-  const icons = {
-    trip: makeIcon('#4a8c3f'),
-    stamp: makeIcon('#3a7ec8'),
-    discount: makeIcon('#e8913a'),
-    castle: makeIcon('#9b2d86'),
-    adventure: makeIcon('#c0392b'),
-  };
 
-  // Init map
-  function initMap() {
-    map = L.map('map', { zoomControl: true }).setView([47.1625, 19.5033], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map);
-
-    tripLayer = L.layerGroup().addTo(map);
-    stampCluster = L.markerClusterGroup({
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      iconCreateFunction: function(cluster) {
-        const count = cluster.getChildCount();
-        let size = count < 20 ? 'small' : count < 100 ? 'medium' : 'large';
-        const sizes = { small: 36, medium: 44, large: 52 };
-        return L.divIcon({
-          html: `<div style="background:rgba(58,126,200,.85);color:#fff;width:${sizes[size]}px;height:${sizes[size]}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${size==='large'?'14':'12'}px;border:3px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.25)">${count}</div>`,
-          className: '',
-          iconSize: [sizes[size], sizes[size]],
-        });
-      }
-    }).addTo(map);
-    discountLayer = L.layerGroup().addTo(map);
-    castleLayer = L.layerGroup().addTo(map);
-    adventureCluster = L.markerClusterGroup({
-      maxClusterRadius: 40,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      iconCreateFunction: function(cluster) {
-        const count = cluster.getChildCount();
-        let sz = count < 10 ? 36 : count < 30 ? 44 : 52;
-        return L.divIcon({
-          html: `<div style="background:rgba(192,57,43,.85);color:#fff;width:${sz}px;height:${sz}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:3px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.25)">${count}</div>`,
-          className: '',
-          iconSize: [sz, sz],
-        });
-      }
-    }).addTo(map);
+  function makeNumberedIcon(color, num) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="adv-number-marker" style="background:' + color + '">' + num + '</div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -16],
+    });
   }
 
-  // Normalize items
-  // Parse coordinate that might contain "lat, lon" in a single field
+  // =========== COORDINATE LOGIC ===========
   function parseCoord(val) {
     if (!val) return NaN;
     const s = String(val).split(',')[0].trim();
@@ -905,20 +1017,15 @@ input[type="range"]::-webkit-slider-thumb {
     }
     return parseCoord(item.lon);
   }
-
-  // Haversine distance in km
   function distKm(lat1, lon1, lat2, lon2) {
     const R = 6371, toRad = Math.PI / 180;
     const dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toRad) * Math.cos(lat2*toRad) * Math.sin(dLon/2)**2;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.asin(Math.sqrt(a));
   }
 
-  function processData(data) {
-    const items = [];
-    const counties = new Set();
-
-    // First pass: collect all coordinates per zip code for median calculation
+  let zipMedian = {};
+  function buildZipMedian(data) {
     const zipCoords = {};
     for (const ds of [data.tripsData, data.stampsData, data.discountsData]) {
       (ds || []).forEach(item => {
@@ -931,42 +1038,134 @@ input[type="range"]::-webkit-slider-thumb {
         }
       });
     }
-    // Calculate median per zip
-    const zipMedian = {};
     for (const [z, coords] of Object.entries(zipCoords)) {
-      const lats = coords.map(c => c[0]).sort((a,b) => a-b);
-      const lons = coords.map(c => c[1]).sort((a,b) => a-b);
+      const lats = coords.map(c => c[0]).sort((a, b) => a - b);
+      const lons = coords.map(c => c[1]).sort((a, b) => a - b);
       const mid = Math.floor(coords.length / 2);
       zipMedian[z] = [lats[mid], lons[mid]];
     }
-
-    // Correct coordinates: if >10km from zip median, use zip median instead
-    function correctCoords(lat, lon, zip) {
-      if (zip && zipMedian[zip]) {
-        const [mLat, mLon] = zipMedian[zip];
-        if (distKm(lat, lon, mLat, mLon) > 10) {
-          return { lat: mLat, lon: mLon };
-        }
+  }
+  function correctCoords(lat, lon, zip) {
+    if (zip && zipMedian[zip]) {
+      const [mLat, mLon] = zipMedian[zip];
+      if (distKm(lat, lon, mLat, mLon) > 10) {
+        return { lat: mLat, lon: mLon };
       }
-      return { lat, lon };
     }
+    return { lat, lon };
+  }
 
-    (data.tripsData || []).forEach(t => {
+  // =========== INIT MAP ===========
+  function initMap() {
+    if (mapInitialized) return;
+    map = L.map('map', { zoomControl: true }).setView([47.1625, 19.5033], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map);
+    mapInitialized = true;
+  }
+
+  function clearMapLayers() {
+    if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
+    if (clusterLayer) { map.removeLayer(clusterLayer); clusterLayer = null; }
+    markerMap = {};
+  }
+
+  // =========== STEP 1: CATEGORY SCREEN ===========
+  function renderCategoryScreen() {
+    let html = '';
+    const catOrder = ['trips', 'bringa', 'adventures', 'castles', 'stamps'];
+    catOrder.forEach(key => {
+      const cat = CATEGORIES[key];
+      let count = 0;
+      if (key === 'trips') count = (rawData.tripsData || []).filter(t => t.active === 1 && t.status === 1).length;
+      else if (key === 'bringa') count = (rawData.bringaData || []).length;
+      else if (key === 'adventures') count = (rawData.adventuresData || []).length;
+      else if (key === 'castles') count = (rawData.castlesData || []).length;
+      else if (key === 'stamps') count = (rawData.stampsData || []).filter(s => s.active === 1 && s.status === 1).length;
+
+      // Update the category desc to have actual count
+      html += '<div class="cat-tile" data-cat="' + key + '" onclick="window._openCategory(\'' + key + '\')">' +
+        '<div class="icon">' + cat.icon + '</div>' +
+        '<div>' +
+          '<div class="tile-name">' + cat.name + '</div>' +
+          '<div class="tile-count">' + count + ' helyszín</div>' +
+          '<div class="tile-desc">' + cat.desc + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    catGrid.innerHTML = html;
+  }
+
+  // =========== NAVIGATION ===========
+  window._openCategory = function(cat) {
+    currentCategory = cat;
+    categoryScreen.classList.add('hidden');
+    detailView.classList.add('active');
+    backBtn.classList.add('visible');
+
+    initMap();
+    setTimeout(() => {
+      map.invalidateSize();
+      buildCategoryView(cat);
+    }, 50);
+  };
+
+  window._goHome = function() {
+    currentCategory = null;
+    categoryScreen.classList.remove('hidden');
+    detailView.classList.remove('active');
+    backBtn.classList.remove('visible');
+    closeDetail();
+    if (map) {
+      clearMapLayers();
+      map.setView([47.1625, 19.5033], 7);
+    }
+    allItems = [];
+    filtered = [];
+    filterState = {};
+  };
+
+  // =========== STEP 2: BUILD CATEGORY VIEW ===========
+  function buildCategoryView(cat) {
+    const cfg = CATEGORIES[cat];
+    clearMapLayers();
+    allItems = [];
+    filtered = [];
+    filterState = {};
+    selectedId = null;
+    displayCount = 50;
+
+    // Sidebar header
+    sidebarCatHeader.innerHTML = '<span class="cat-icon">' + cfg.icon + '</span>' +
+      '<span class="cat-title" style="color:' + cfg.colorHex + '">' + cfg.name + '</span>';
+
+    // Build filters + items based on category
+    if (cat === 'trips') buildTripsView();
+    else if (cat === 'bringa') buildBringaView();
+    else if (cat === 'adventures') buildAdventuresView();
+    else if (cat === 'castles') buildCastlesView();
+    else if (cat === 'stamps') buildStampsView();
+
+    setupMobileSidebar();
+  }
+
+  // =========== TRIPS ===========
+  function buildTripsView() {
+    const counties = new Set();
+    (rawData.tripsData || []).forEach(t => {
       if (t.active !== 1 || t.status !== 1) return;
       let lat = parseCoord(t.lat || t.trip_lat);
       let lon = t.trip_lon ? parseCoord(t.trip_lon) : parseLon(t);
       if (isNaN(lat) || isNaN(lon)) return;
       ({ lat, lon } = correctCoords(lat, lon, t.zip));
       if (t.county) counties.add(t.county);
-      items.push({
-        _type: 'trip',
-        _id: 'trip_' + t.id,
-        _raw: t,
+      allItems.push({
+        _id: 'trip_' + t.id, _raw: t,
         name: t.name || t.trip_name || '',
-        city: t.city || '',
-        county: t.county || '',
-        description: t.description || '',
-        longDescription: t.long_description || '',
+        city: t.city || '', county: t.county || '',
+        description: t.description || '', longDescription: t.long_description || '',
         lat, lon,
         difficulty: parseInt(t.difficulty) || 1,
         duration: parseFloat(t.duration) || 0,
@@ -976,269 +1175,496 @@ input[type="range"]::-webkit-slider-thumb {
       });
     });
 
-    (data.stampsData || []).forEach(s => {
+    filterState = { search: '', county: '', maxDiff: 5, maxDur: 10, amenities: {} };
+
+    const sortedCounties = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
+    let fHtml = '<div class="search-box"><span class="search-icon">&#128269;</span>' +
+      '<input type="text" id="fSearch" placeholder="Keresés név, város vagy vármegye alapján..."></div>';
+    fHtml += '<div class="filter-row"><div class="filter-label">Vármegye</div>' +
+      '<select id="fCounty" class="filter-select"><option value="">Összes vármegye</option>';
+    sortedCounties.forEach(c => { fHtml += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
+    fHtml += '</select></div>';
+    fHtml += '<div class="filter-row" style="gap:12px"><div style="flex:1">' +
+      '<span style="font-size:.78rem;color:#666">Nehézség (max):</span>' +
+      '<div class="difficulty-display"><input type="range" id="fDiff" min="1" max="5" value="5" step="1">' +
+      '<span id="fDiffLabel">\u{1F43E}\u{1F43E}\u{1F43E}\u{1F43E}\u{1F43E}</span></div></div>' +
+      '<div style="flex:1"><span style="font-size:.78rem;color:#666">Max időtartam (óra):</span>' +
+      '<div class="difficulty-display"><input type="range" id="fDur" min="1" max="10" value="10" step="1">' +
+      '<span id="fDurLabel">10 óra</span></div></div></div>';
+    fHtml += '<div class="filter-label" style="margin-top:4px">Szolgáltatások</div>' +
+      '<div class="amenity-toggles" id="amenityToggles">' +
+      '<span class="amenity-chip" data-amenity="toilet">&#128701; WC</span>' +
+      '<span class="amenity-chip" data-amenity="parking">&#127359; Parkoló</span>' +
+      '<span class="amenity-chip" data-amenity="buffet">&#127828; Büfé</span>' +
+      '<span class="amenity-chip" data-amenity="dog_allowed">&#128054; Kutyabarát</span>' +
+      '<span class="amenity-chip" data-amenity="carriage">&#128118; Babakocsival járható</span>' +
+      '</div>';
+    filtersArea.innerHTML = fHtml;
+
+    // Event listeners
+    let searchTimer;
+    $('fSearch').addEventListener('input', function() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250); });
+    $('fCounty').addEventListener('change', function() { filterState.county = this.value; applyFiltersAndRender(); });
+    $('fDiff').addEventListener('input', function() { filterState.maxDiff = parseInt(this.value); $('fDiffLabel').textContent = '\u{1F43E}'.repeat(filterState.maxDiff); applyFiltersAndRender(); });
+    $('fDur').addEventListener('input', function() { filterState.maxDur = parseInt(this.value); $('fDurLabel').textContent = this.value + ' óra'; applyFiltersAndRender(); });
+    document.querySelectorAll('.amenity-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const a = chip.dataset.amenity;
+        filterState.amenities[a] = !filterState.amenities[a];
+        chip.classList.toggle('active', filterState.amenities[a]);
+        applyFiltersAndRender();
+      });
+    });
+
+    markerLayer = L.layerGroup().addTo(map);
+    applyFiltersAndRender();
+  }
+
+  function filterTrips() {
+    const q = (filterState.search || '').toLowerCase();
+    const anyAmenity = Object.values(filterState.amenities || {}).some(v => v);
+    return allItems.filter(item => {
+      if (q && !(item.name.toLowerCase().includes(q) || item.city.toLowerCase().includes(q) || item.county.toLowerCase().includes(q) || item.description.toLowerCase().includes(q))) return false;
+      if (filterState.county && item.county !== filterState.county) return false;
+      if (item.difficulty > filterState.maxDiff) return false;
+      if (item.duration > filterState.maxDur) return false;
+      if (anyAmenity) {
+        for (const [key, active] of Object.entries(filterState.amenities)) {
+          if (active && !item[key]) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  // =========== BRINGA ===========
+  function buildBringaView() {
+    (rawData.bringaData || []).forEach((b, idx) => {
+      const lat = b.start_coordinates ? parseFloat(b.start_coordinates.lat) : NaN;
+      const lng = b.start_coordinates ? parseFloat(b.start_coordinates.lng) : NaN;
+      if (isNaN(lat) || isNaN(lng)) return;
+      allItems.push({
+        _id: 'bringa_' + idx, _raw: b,
+        name: b.title || '', city: '', county: '',
+        lat, lon: lng,
+        difficulty: b.difficulty || '',
+        length_km: b.length_km || '',
+        travel_time: b.travel_time || '',
+        elevation_m: b.elevation_m || '',
+        meal_available: b.meal_available || '',
+      });
+    });
+
+    filterState = { search: '' };
+    let fHtml = '<div class="search-box"><span class="search-icon">&#128269;</span>' +
+      '<input type="text" id="fSearch" placeholder="Keresés bringakör neve alapján..."></div>';
+    filtersArea.innerHTML = fHtml;
+
+    let searchTimer;
+    $('fSearch').addEventListener('input', function() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250); });
+
+    markerLayer = L.layerGroup().addTo(map);
+    applyFiltersAndRender();
+  }
+
+  function filterBringa() {
+    const q = (filterState.search || '').toLowerCase();
+    return allItems.filter(item => {
+      if (q && !item.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+
+  // =========== ADVENTURES ===========
+  function buildAdventuresView() {
+    filterState = { adventureSlug: null, questName: null };
+
+    const adventures = rawData.adventuresData || [];
+    let fHtml = '<div class="filter-label">Kalandkönyv</div>' +
+      '<select id="fAdvSelect" class="filter-select"><option value="">Válassz kalandkönyvet...</option>';
+    adventures.forEach(a => {
+      const slug = a.unique_slug || a.slug;
+      fHtml += '<option value="' + esc(slug) + '">' + esc(a.name) + '</option>';
+    });
+    fHtml += '</select>';
+    fHtml += '<div id="questChipsArea" style="margin-top:10px"></div>';
+    fHtml += '<div id="adventureInfoArea" style="margin-top:10px"></div>';
+    filtersArea.innerHTML = fHtml;
+
+    $('fAdvSelect').addEventListener('change', function() {
+      filterState.adventureSlug = this.value || null;
+      filterState.questName = null;
+      buildAdventureQuestChips();
+      applyFiltersAndRender();
+    });
+
+    markerLayer = L.layerGroup().addTo(map);
+    // Show nothing until adventure + quest selected
+    resultCount.innerHTML = 'Válassz egy kalandkönyvet a listából.';
+    resultsList.innerHTML = '';
+    renderAdventureMarkers();
+  }
+
+  function buildAdventureQuestChips() {
+    const area = $('questChipsArea');
+    const infoArea = $('adventureInfoArea');
+    area.innerHTML = '';
+    infoArea.innerHTML = '';
+    if (!filterState.adventureSlug) return;
+
+    const adv = (rawData.adventuresData || []).find(a => (a.unique_slug || a.slug) === filterState.adventureSlug);
+    if (!adv || !adv.stations) return;
+
+    const quests = [...new Set(adv.stations.map(s => s.quest_name).filter(Boolean))];
+    if (!quests.length) return;
+
+    let html = '<div class="filter-label">Küldetés</div>';
+    quests.forEach(q => {
+      html += '<span class="quest-chip" data-quest="' + esc(q) + '">' + esc(q) + '</span>';
+    });
+    area.innerHTML = html;
+
+    area.querySelectorAll('.quest-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const q = chip.dataset.quest;
+        if (filterState.questName === q) {
+          filterState.questName = null;
+          chip.classList.remove('active');
+        } else {
+          area.querySelectorAll('.quest-chip').forEach(c => c.classList.remove('active'));
+          filterState.questName = q;
+          chip.classList.add('active');
+        }
+        applyFiltersAndRender();
+      });
+    });
+  }
+
+  function filterAdventures() {
+    // For adventures, items are the stations of the selected quest
+    if (!filterState.adventureSlug || !filterState.questName) return [];
+    const adv = (rawData.adventuresData || []).find(a => (a.unique_slug || a.slug) === filterState.adventureSlug);
+    if (!adv) return [];
+    const stations = (adv.stations || []).filter(s => s.quest_name === filterState.questName);
+    return stations.map((s, idx) => ({
+      _id: 'adv_' + filterState.adventureSlug + '_' + (s.id || idx),
+      _raw: { ...s, adventure_name: adv.name, adventure_slug: filterState.adventureSlug, adventure_desc: adv.description, adventure_image: adv.image },
+      name: s.station_name || '',
+      questName: s.quest_name || '',
+      lat: parseFloat(s.lat),
+      lon: parseFloat(s.lng),
+      stationId: parseInt(s.station_id) || idx,
+      city: '', county: '',
+    })).filter(s => !isNaN(s.lat) && !isNaN(s.lon)).sort((a, b) => a.stationId - b.stationId);
+  }
+
+  function renderAdventureMarkers() {
+    if (markerLayer) markerLayer.clearLayers();
+    markerMap = {};
+    if (!filterState.adventureSlug || !filterState.questName) {
+      // Show all adventure centers
+      (rawData.adventuresData || []).forEach(adv => {
+        if (adv.center_lat && adv.center_lng) {
+          const m = L.marker([adv.center_lat, adv.center_lng], { icon: makeIcon('#c0392b') });
+          m.bindPopup('<div class="popup-name">' + esc(adv.name) + '</div><div class="popup-location">' + esc(adv.description || '') + '</div>');
+          markerLayer.addLayer(m);
+        }
+      });
+      return;
+    }
+
+    const stations = filtered;
+    stations.forEach((s, idx) => {
+      const m = L.marker([s.lat, s.lon], { icon: makeNumberedIcon('#c0392b', idx + 1) });
+      m.bindPopup('<div class="popup-name">' + (idx + 1) + '. ' + esc(s.name) + '</div>' +
+        '<div class="popup-location">' + esc(s.questName) + '</div>' +
+        '<button class="popup-btn" style="background:var(--red)" onclick="window._showDetail(\'' + s._id + '\')">Részletek</button>');
+      markerLayer.addLayer(m);
+      markerMap[s._id] = m;
+    });
+
+    if (stations.length) {
+      const bounds = L.latLngBounds(stations.map(s => [s.lat, s.lon]));
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    }
+  }
+
+  // =========== CASTLES ===========
+  function buildCastlesView() {
+    (rawData.castlesData || []).forEach(c => {
+      const lat = parseFloat(c.lat);
+      const lon = parseFloat(c.lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      allItems.push({
+        _id: 'castle_' + c.id, _raw: c,
+        name: c.name || '', city: c.city || '', county: '',
+        address: c.address || '',
+        lat, lon,
+      });
+    });
+
+    filterState = { search: '' };
+    let fHtml = '<div class="search-box"><span class="search-icon">&#128269;</span>' +
+      '<input type="text" id="fSearch" placeholder="Keresés vár vagy kastély neve alapján..."></div>';
+    filtersArea.innerHTML = fHtml;
+
+    let searchTimer;
+    $('fSearch').addEventListener('input', function() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250); });
+
+    markerLayer = L.layerGroup().addTo(map);
+    applyFiltersAndRender();
+  }
+
+  function filterCastles() {
+    const q = (filterState.search || '').toLowerCase();
+    return allItems.filter(item => {
+      if (q && !(item.name.toLowerCase().includes(q) || item.city.toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }
+
+  // =========== STAMPS ===========
+  function buildStampsView() {
+    const counties = new Set();
+    (rawData.stampsData || []).forEach(s => {
       if (s.active !== 1 || s.status !== 1) return;
       let lat = parseCoord(s.lat);
       let lon = parseLon(s);
       if (isNaN(lat) || isNaN(lon)) return;
       ({ lat, lon } = correctCoords(lat, lon, s.zip));
       if (s.county) counties.add(s.county);
-      items.push({
-        _type: 'stamp',
-        _id: 'stamp_' + s.id,
-        _raw: s,
-        name: s.name || '',
-        city: s.city || '',
-        county: s.county || '',
-        description: '',
-        longDescription: '',
+      allItems.push({
+        _id: 'stamp_' + s.id, _raw: s,
+        name: s.name || '', city: s.city || '', county: s.county || '',
         lat, lon,
       });
     });
 
-    (data.discountsData || []).forEach(d => {
-      if (d.active !== 1 || d.status !== 1) return;
-      let lat = parseCoord(d.lat);
-      let lon = parseLon(d);
-      if (isNaN(lat) || isNaN(lon)) return;
-      ({ lat, lon } = correctCoords(lat, lon, d.zip));
-      if (d.county) counties.add(d.county);
-      items.push({
-        _type: 'discount',
-        _id: 'discount_' + d.id,
-        _raw: d,
-        name: d.discount_name || '',
-        venue: d.venue || '',
-        city: d.city || '',
-        county: d.county || '',
-        description: d.discount_description || '',
-        longDescription: d.discount_description || '',
-        lat, lon,
-      });
-    });
+    const sortedCounties = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
+    filterState = { search: '', county: '' };
 
-    (data.castlesData || []).forEach(c => {
-      const lat = parseFloat(c.lat);
-      const lon = parseFloat(c.lon);
-      if (isNaN(lat) || isNaN(lon)) return;
-      items.push({
-        _type: 'castle',
-        _id: 'castle_' + c.id,
-        _raw: c,
-        name: c.name || '',
-        city: c.city || '',
-        county: '',
-        description: '',
-        longDescription: '',
-        lat, lon,
-      });
-    });
+    let fHtml = '<div class="search-box"><span class="search-icon">&#128269;</span>' +
+      '<input type="text" id="fSearch" placeholder="Keresés név, város vagy vármegye alapján..."></div>';
+    fHtml += '<div class="filter-row"><div class="filter-label">Vármegye</div>' +
+      '<select id="fCounty" class="filter-select"><option value="">Összes vármegye</option>';
+    sortedCounties.forEach(c => { fHtml += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
+    fHtml += '</select></div>';
+    filtersArea.innerHTML = fHtml;
 
-    // Adventures (stations from kajla-kalandok)
-    const adventureNames = [];
-    (data.adventuresData || []).forEach(adv => {
-      const uSlug = adv.unique_slug || adv.slug;
-      adventureNames.push({ slug: uSlug, name: adv.name, desc: adv.description || '' });
-      (adv.stations || []).forEach(s => {
-        const lat = parseFloat(s.lat);
-        const lon = parseFloat(s.lng);
-        if (isNaN(lat) || isNaN(lon)) return;
-        items.push({
-          _type: 'adventure',
-          _adventureSlug: uSlug,
-          _id: 'adv_' + uSlug + '_' + s.id + '_' + s.quest_id,
-          _raw: { ...s, adventure_name: adv.name, adventure_slug: uSlug, adventure_desc: adv.description, adventure_image: adv.image },
-          name: s.station_name || s.quest_name || '',
-          city: adv.slug.charAt(0).toUpperCase() + adv.slug.slice(1),
-          county: '',
-          description: s.quest_name || '',
-          longDescription: '',
-          lat, lon,
+    let searchTimer;
+    $('fSearch').addEventListener('input', function() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250); });
+    $('fCounty').addEventListener('change', function() { filterState.county = this.value; applyFiltersAndRender(); });
+
+    clusterLayer = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        const size = count < 20 ? 'small' : count < 100 ? 'medium' : 'large';
+        const sizes = { small: 36, medium: 44, large: 52 };
+        return L.divIcon({
+          html: '<div style="background:rgba(58,126,200,.85);color:#fff;width:' + sizes[size] + 'px;height:' + sizes[size] + 'px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:' + (size === 'large' ? '14' : '12') + 'px;border:3px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.25)">' + count + '</div>',
+          className: '',
+          iconSize: [sizes[size], sizes[size]],
         });
-      });
-    });
-
-    // Build adventure dropdown
-    const advSelect = document.getElementById('adventureSelect');
-    advSelect.innerHTML = '<option value="">Válassz kalandkönyvet...</option>';
-    adventureNames.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.slug;
-      opt.textContent = a.name;
-      advSelect.appendChild(opt);
-    });
-
-    // Store adventure metadata for quest building
-    window._adventureMeta = adventureNames;
-    adventureItems = items.filter(i => i._type === 'adventure');
-
-    // Populate county dropdown
-    const sorted = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
-    sorted.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      opt.textContent = c;
-      countySelect.appendChild(opt);
-    });
-
-    return items;
+      }
+    }).addTo(map);
+    applyFiltersAndRender();
   }
 
-  // Search text matching
-  function matchesSearch(item, query) {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (item.name.toLowerCase().includes(q) ||
-            item.city.toLowerCase().includes(q) ||
-            item.county.toLowerCase().includes(q) ||
-            item.description.toLowerCase().includes(q) ||
-            (item.venue && item.venue.toLowerCase().includes(q)));
-  }
-
-  // Filter logic
-  function applyFilters() {
-    const query = searchInput.value.trim();
-    const county = countySelect.value;
-    const maxDiff = parseInt(difficultySlider.value);
-    const maxDur = parseInt(durationSlider.value);
-    const anyAmenity = Object.values(amenityState).some(v => v);
-
-    filtered = allItems.filter(item => {
-      if (!typeState[item._type]) return false;
-      if (!matchesSearch(item, query)) return false;
-      if (county && item.county !== county) return false;
-      if (item._type === 'trip') {
-        if (item.difficulty > maxDiff) return false;
-        if (item.duration > maxDur) return false;
-        if (anyAmenity) {
-          for (const [key, active] of Object.entries(amenityState)) {
-            if (active && !item[key]) return false;
-          }
-        }
-      }
-      if (item._type === 'adventure') {
-        // Only show if an adventure + quest is selected
-        if (!selectedAdventure || !selectedQuest) return false;
-        if (item._adventureSlug !== selectedAdventure) return false;
-        if (item.description !== selectedQuest) return false;
-      }
+  function filterStamps() {
+    const q = (filterState.search || '').toLowerCase();
+    return allItems.filter(item => {
+      if (q && !(item.name.toLowerCase().includes(q) || item.city.toLowerCase().includes(q) || item.county.toLowerCase().includes(q))) return false;
+      if (filterState.county && item.county !== filterState.county) return false;
       return true;
     });
+  }
 
+  // =========== GENERIC FILTER + RENDER ===========
+  function applyFiltersAndRender() {
     displayCount = 50;
+
+    if (currentCategory === 'trips') filtered = filterTrips();
+    else if (currentCategory === 'bringa') filtered = filterBringa();
+    else if (currentCategory === 'adventures') { filtered = filterAdventures(); renderAdventureResults(); renderAdventureMarkers(); return; }
+    else if (currentCategory === 'castles') filtered = filterCastles();
+    else if (currentCategory === 'stamps') filtered = filterStamps();
+
     renderResults();
     renderMarkers();
     updateResultCount();
   }
 
   function updateResultCount() {
-    resultCount.innerHTML = `<strong>${filtered.length}</strong> találat`;
+    const cfg = CATEGORIES[currentCategory];
+    resultCount.innerHTML = '<strong style="color:' + cfg.colorHex + '">' + filtered.length + '</strong> találat';
   }
 
-  // Render results list
+  // =========== RENDER RESULTS (generic) ===========
   function renderResults() {
     const showing = filtered.slice(0, displayCount);
+    const cfg = CATEGORIES[currentCategory];
     let html = '';
+
     showing.forEach(item => {
-      const badgeClass = item._type === 'trip' ? 'badge-trip' : item._type === 'stamp' ? 'badge-stamp' : item._type === 'castle' ? 'badge-castle' : item._type === 'adventure' ? 'badge-adventure' : 'badge-discount';
-      const badgeText = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : item._type === 'castle' ? 'Vár / Kastély' : item._type === 'adventure' ? 'Kaland' : 'Kedvezmény';
       const sel = item._id === selectedId ? ' selected' : '';
+      const borderColor = item._id === selectedId ? cfg.colorHex : 'transparent';
 
       let thumb = '';
-      if (item._type === 'trip' && item.thumb) {
-        thumb = `<img class="card-thumb" src="${item.thumb}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      if (currentCategory === 'trips' && item.thumb) {
+        thumb = '<img class="card-thumb" src="' + item.thumb + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
-
-      let venueHtml = '';
-      if (item._type === 'discount' && item.venue) {
-        venueHtml = `<div class="card-venue">${esc(item.venue)}</div>`;
-      } else if (item._type === 'adventure') {
-        venueHtml = `<div class="card-venue">${esc(item._raw.adventure_name)}${item.description ? ' — ' + esc(item.description) : ''}</div>`;
+      if (currentCategory === 'castles' && item._raw.popup_image_desktop) {
+        thumb = '<img class="card-thumb" src="' + item._raw.popup_image_desktop + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+      }
+      if (currentCategory === 'bringa' && item._raw.images && item._raw.images.list) {
+        thumb = '<img class="card-thumb" src="' + item._raw.images.list + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
 
       let meta = '';
-      if (item._type === 'trip') {
-        const paws = '🐾'.repeat(item.difficulty);
-        meta = `<div class="card-meta"><span>${paws}</span><span>${item.duration} óra</span></div>`;
+      if (currentCategory === 'trips') {
+        meta = '<div class="card-meta"><span>' + '\u{1F43E}'.repeat(item.difficulty) + '</span><span>' + item.duration + ' óra</span></div>';
+      }
+      if (currentCategory === 'bringa') {
+        meta = '<div class="card-meta"><span>' + esc(item.length_km) + '</span><span>' + esc(item.travel_time) + '</span><span>Nehézség: ' + esc(item.difficulty) + '</span></div>';
       }
 
-      html += `<div class="result-card${sel}" data-id="${item._id}" onclick="window._selectItem('${item._id}')">
-        ${thumb}
-        <div class="card-body">
-          <span class="card-badge ${badgeClass}">${badgeText}</span>
-          <div class="card-name">${esc(item.name)}</div>
-          ${venueHtml}
-          <div class="card-location">${esc(item.city)}${item.county ? ', ' + esc(item.county) : ''}</div>
-          ${meta}
-        </div>
-      </div>`;
+      let locText = '';
+      if (item.city) locText = esc(item.city);
+      if (item.county) locText += (locText ? ', ' : '') + esc(item.county);
+      if (currentCategory === 'castles' && item.address) {
+        locText = esc(item.city) + (item.address ? ', ' + esc(item.address) : '');
+      }
+
+      html += '<div class="result-card' + sel + '" data-id="' + item._id + '" style="border-left:3px solid ' + (sel ? cfg.colorHex : 'transparent') + '" onclick="window._selectItem(\'' + item._id + '\')">' +
+        thumb +
+        '<div class="card-body">' +
+          '<div class="card-name">' + esc(item.name) + '</div>' +
+          (locText ? '<div class="card-location">' + locText + '</div>' : '') +
+          meta +
+        '</div>' +
+      '</div>';
     });
 
     if (filtered.length > displayCount) {
-      html += `<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (${filtered.length - displayCount} hátra)</button>`;
+      html += '<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (' + (filtered.length - displayCount) + ' hátra)</button>';
     }
     resultsList.innerHTML = html;
   }
 
-  function esc(str) {
-    if (!str) return '';
-    const el = document.createElement('span');
-    el.textContent = str;
-    return el.innerHTML;
-  }
+  // Adventure-specific results
+  function renderAdventureResults() {
+    if (!filterState.adventureSlug) {
+      resultCount.innerHTML = 'Válassz egy kalandkönyvet a listából.';
+      resultsList.innerHTML = '';
+      return;
+    }
+    if (!filterState.questName) {
+      resultCount.innerHTML = 'Válassz egy küldetést a szűrőkből.';
+      resultsList.innerHTML = '';
 
-  // Render markers on map
-  function renderMarkers() {
-    tripLayer.clearLayers();
-    stampCluster.clearLayers();
-    discountLayer.clearLayers();
-    castleLayer.clearLayers();
-    adventureCluster.clearLayers();
-    markerMap = {};
-
-    filtered.forEach(item => {
-      const marker = L.marker([item.lat, item.lon], { icon: icons[item._type] });
-      const typeName = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : item._type === 'castle' ? 'Vár / Kastély' : item._type === 'adventure' ? 'Kaland' : 'Kedvezmény';
-      let popupName = item.name;
-      let extra = '';
-      if (item._type === 'discount' && item.venue) {
-        extra = `<div style="font-size:.78rem;color:#666;margin-bottom:2px">${esc(item.venue)}</div>`;
+      // Show adventure info
+      const adv = (rawData.adventuresData || []).find(a => (a.unique_slug || a.slug) === filterState.adventureSlug);
+      if (adv) {
+        const infoArea = $('adventureInfoArea');
+        let infoHtml = '<div style="padding:12px;background:var(--red-light);border-radius:10px">';
+        if (adv.image) {
+          const imgSrc = adv.image.startsWith('http') ? adv.image : 'https://kajla.hu/' + adv.image.replace(/^\//, '');
+          infoHtml += '<img src="' + imgSrc + '" alt="" style="width:100%;border-radius:8px;margin-bottom:8px" onerror="this.style.display=\'none\'">';
+        }
+        infoHtml += '<div style="font-weight:700;color:var(--red);margin-bottom:4px">' + esc(adv.name) + '</div>';
+        infoHtml += '<div style="font-size:.84rem;color:#666">' + esc(adv.description || '') + '</div>';
+        infoHtml += '</div>';
+        infoArea.innerHTML = infoHtml;
       }
-      marker.bindPopup(`
-        <div class="popup-name">${esc(popupName)}</div>
-        ${extra}
-        <div class="popup-location">${esc(item.city)}${item.county ? ', ' + esc(item.county) : ''}</div>
-        <button class="popup-btn" onclick="window._showDetail('${item._id}')">Részletek</button>
-      `, { maxWidth: 280 });
+      return;
+    }
 
-      markerMap[item._id] = marker;
+    $('adventureInfoArea').innerHTML = '';
+    const stations = filtered;
+    resultCount.innerHTML = '<strong style="color:var(--red)">' + stations.length + '</strong> állomás';
 
-      if (item._type === 'trip') tripLayer.addLayer(marker);
-      else if (item._type === 'stamp') stampCluster.addLayer(marker);
-      else if (item._type === 'castle') castleLayer.addLayer(marker);
-      else if (item._type === 'adventure') adventureCluster.addLayer(marker);
-      else discountLayer.addLayer(marker);
+    let html = '<ol class="station-list" style="padding:10px 14px">';
+    stations.forEach((s, idx) => {
+      html += '<li data-id="' + s._id + '">' + esc(s.name) + '</li>';
+    });
+    html += '</ol>';
+    resultsList.innerHTML = html;
+
+    resultsList.querySelectorAll('.station-list li').forEach(li => {
+      li.addEventListener('click', () => { window._selectItem(li.dataset.id); });
     });
   }
 
-  // Select an item from the list
+  // =========== RENDER MARKERS ===========
+  function renderMarkers() {
+    const cfg = CATEGORIES[currentCategory];
+
+    if (currentCategory === 'stamps') {
+      // Use cluster layer
+      clusterLayer.clearLayers();
+      markerMap = {};
+      filtered.forEach(item => {
+        const m = L.marker([item.lat, item.lon], { icon: makeIcon(cfg.colorHex) });
+        m.bindPopup(
+          '<div class="popup-name">' + esc(item.name) + '</div>' +
+          '<div class="popup-location">' + esc(item.city) + (item.county ? ', ' + esc(item.county) : '') + '</div>' +
+          '<button class="popup-btn" style="background:' + cfg.colorHex + '" onclick="window._showDetail(\'' + item._id + '\')">Részletek</button>'
+        , { maxWidth: 280 });
+        clusterLayer.addLayer(m);
+        markerMap[item._id] = m;
+      });
+    } else if (currentCategory === 'bringa') {
+      markerLayer.clearLayers();
+      markerMap = {};
+      filtered.forEach(item => {
+        // Main route marker
+        const m = L.marker([item.lat, item.lon], { icon: makeIcon(cfg.colorHex) });
+        m.bindPopup(
+          '<div class="popup-name">' + esc(item.name) + '</div>' +
+          '<div class="popup-location">' + esc(item.length_km) + ' &middot; ' + esc(item.travel_time) + '</div>' +
+          '<button class="popup-btn" style="background:' + cfg.colorHex + '" onclick="window._showDetail(\'' + item._id + '\')">Részletek</button>'
+        , { maxWidth: 280 });
+        markerLayer.addLayer(m);
+        markerMap[item._id] = m;
+      });
+    } else {
+      markerLayer.clearLayers();
+      markerMap = {};
+      filtered.forEach(item => {
+        const m = L.marker([item.lat, item.lon], { icon: makeIcon(cfg.colorHex) });
+        let locLine = esc(item.city);
+        if (item.county) locLine += ', ' + esc(item.county);
+        m.bindPopup(
+          '<div class="popup-name">' + esc(item.name) + '</div>' +
+          '<div class="popup-location">' + locLine + '</div>' +
+          '<button class="popup-btn" style="background:' + cfg.colorHex + '" onclick="window._showDetail(\'' + item._id + '\')">Részletek</button>'
+        , { maxWidth: 280 });
+        markerLayer.addLayer(m);
+        markerMap[item._id] = m;
+      });
+    }
+  }
+
+  // =========== SELECT ITEM ===========
   window._selectItem = function(id) {
     selectedId = id;
-    // Highlight card
-    document.querySelectorAll('.result-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
-    // Pan map
+    document.querySelectorAll('.result-card').forEach(c => {
+      const isSel = c.dataset.id === id;
+      c.classList.toggle('selected', isSel);
+      const cfg = CATEGORIES[currentCategory];
+      c.style.borderLeftColor = isSel ? cfg.colorHex : 'transparent';
+    });
+
     const marker = markerMap[id];
     if (marker) {
-      if (stampCluster.hasLayer(marker)) {
-        stampCluster.zoomToShowLayer(marker, function() {
-          setTimeout(() => marker.openPopup(), 200);
-        });
-      } else if (adventureCluster.hasLayer(marker)) {
-        adventureCluster.zoomToShowLayer(marker, function() {
+      if (clusterLayer && clusterLayer.hasLayer && clusterLayer.hasLayer(marker)) {
+        clusterLayer.zoomToShowLayer(marker, function() {
           setTimeout(() => marker.openPopup(), 200);
         });
       } else {
-        // Trip / discount markers are in simple layer groups
         const ll = marker.getLatLng();
         map.setView(ll, Math.max(map.getZoom(), 12), { animate: true });
         setTimeout(() => marker.openPopup(), 350);
@@ -1246,141 +1672,153 @@ input[type="range"]::-webkit-slider-thumb {
     }
   };
 
-  // Load more
   window._loadMore = function() {
     displayCount += 50;
     renderResults();
   };
 
-  // Show detail panel
+  // =========== SHOW DETAIL PANEL ===========
   window._showDetail = function(id) {
-    const item = allItems.find(i => i._id === id);
+    const cfg = CATEGORIES[currentCategory];
+    detailHeader.style.background = cfg.headerGrad;
+
+    if (currentCategory === 'adventures') {
+      showAdventureDetail(id);
+      return;
+    }
+    if (currentCategory === 'bringa') {
+      showBringaDetail(id);
+      return;
+    }
+
+    const item = filtered.find(i => i._id === id) || allItems.find(i => i._id === id);
     if (!item) return;
 
     detailTitle.textContent = item.name;
     let html = '';
     const raw = item._raw;
 
-    // Adventure details
-    if (item._type === 'adventure') {
-      html += `<div class="detail-section"><div class="detail-section-title">Kaland</div><p><strong>${esc(raw.adventure_name)}</strong></p><p>${esc(raw.adventure_desc || '')}</p></div>`;
-      if (raw.quest_name) {
-        html += `<div class="detail-section"><div class="detail-section-title">Küldetés</div><p>${esc(raw.quest_name)}</p></div>`;
+    // Category-specific section title color
+    const stColor = cfg.darkHex;
+    const stBorder = cfg.lightHex;
+
+    function secTitle(title) {
+      return '<div class="detail-section-title" style="color:' + stColor + ';border-bottom-color:' + stBorder + '">' + title + '</div>';
+    }
+
+    // TRIPS
+    if (currentCategory === 'trips') {
+      // Images
+      if (raw.trip_images && raw.trip_images.length) {
+        html += '<div class="detail-section">' + secTitle('Képek') + '<div class="detail-images">';
+        raw.trip_images.forEach(img => {
+          const src = img.image_src.startsWith('http') ? img.image_src : 'https://kajla.hu' + img.image_src;
+          html += '<img src="' + src + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+        });
+        html += '</div></div>';
       }
-      if (raw.image) {
-        const imgSrc = raw.image.startsWith('http') ? raw.image : 'https://kajla.hu/' + raw.image.replace(/^\//, '');
-        html += `<div class="detail-section"><div class="detail-images"><img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:100%;border-radius:8px"></div></div>`;
+
+      // Description
+      if (item.longDescription) {
+        html += '<div class="detail-section">' + secTitle('Leírás') + '<div>' + formatDesc(item.longDescription) + '</div></div>';
       }
-    }
 
-    // Castle popup image
-    if (item._type === 'castle' && raw.popup_image_desktop) {
-      html += `<div class="detail-section"><div class="detail-images">`;
-      html += `<img src="${raw.popup_image_desktop}" alt="${esc(item.name)}" loading="lazy" onerror="this.style.display='none'" style="width:100%;border-radius:8px">`;
-      html += `</div></div>`;
-    }
-
-    // Images (trips)
-    if (item._type === 'trip' && raw.trip_images && raw.trip_images.length) {
-      html += `<div class="detail-section"><div class="detail-section-title">Képek</div><div class="detail-images">`;
-      raw.trip_images.forEach(img => {
-        const src = img.image_src.startsWith('http') ? img.image_src : 'https://kajla.hu' + img.image_src;
-        html += `<img src="${src}" alt="" loading="lazy" onerror="this.style.display='none'">`;
-      });
-      html += `</div></div>`;
-    }
-
-    // Description
-    if (item._type === 'trip' && item.longDescription) {
-      html += `<div class="detail-section"><div class="detail-section-title">Leírás</div><div>${formatDesc(item.longDescription)}</div></div>`;
-    } else if (item._type === 'discount' && item.longDescription) {
-      html += `<div class="detail-section"><div class="detail-section-title">Kedvezmény részletei</div><div>${formatDesc(item.longDescription)}</div></div>`;
-      if (item.venue) {
-        html += `<div class="detail-section"><div class="detail-section-title">Helyszín</div><p>${esc(item.venue)}</p></div>`;
+      // Address
+      let address = '';
+      if (raw.zip) address += raw.zip + ' ';
+      if (item.city) address += item.city + ', ';
+      if (raw.address) address += raw.address + ' ';
+      if (raw.address_name) address += raw.address_name;
+      if (address) {
+        html += '<div class="detail-section">' + secTitle('Cím') + '<p>' + esc(address.trim()) + '</p></div>';
       }
-    }
+      if (item.county) {
+        html += '<div class="detail-section">' + secTitle('Vármegye') + '<p>' + esc(item.county) + '</p></div>';
+      }
 
-    // Address
-    let address = '';
-    if (raw.zip || raw.postal_code) address += (raw.zip || raw.postal_code) + ' ';
-    if (item.city) address += item.city + ', ';
-    if (raw.address) address += raw.address + ' ';
-    if (raw.address_name) address += raw.address_name;
-    if (raw.full_address) address = raw.full_address;
-    if (address) {
-      html += `<div class="detail-section"><div class="detail-section-title">Cím</div><p>${esc(address.trim())}</p></div>`;
-    }
+      // Trip data
+      html += '<div class="detail-section">' + secTitle('Túra adatok') +
+        '<p>Nehézség: ' + '\u{1F43E}'.repeat(item.difficulty) + ' (' + item.difficulty + '/5)</p>' +
+        '<p>Időtartam: ' + item.duration + ' óra</p>' +
+        (raw.length ? '<p>Táv: ' + esc(raw.length) + '</p>' : '') +
+      '</div>';
 
-    // County
-    if (item.county) {
-      html += `<div class="detail-section"><div class="detail-section-title">Vármegye</div><p>${esc(item.county)}</p></div>`;
-    }
-
-    // GPS
-    html += `<div class="detail-section"><div class="detail-section-title">GPS koordináták</div><p>${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</p></div>`;
-
-    // Opening hours
-    if (item._type === 'trip') {
+      // Opening hours
       if (raw.open_hours_trip) {
-        html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás (túra)</div><div>${formatPlain(raw.open_hours_trip)}</div></div>`;
+        html += '<div class="detail-section">' + secTitle('Nyitvatartás (túra)') + formatPlain(raw.open_hours_trip) + '</div>';
       }
       if (raw.open_hours_stamp) {
-        html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás (pecsételő pont)</div><div>${formatDesc(raw.open_hours_stamp)}</div></div>`;
+        html += '<div class="detail-section">' + secTitle('Nyitvatartás (pecsételő pont)') + '<div>' + formatDesc(raw.open_hours_stamp) + '</div></div>';
       }
-    }
-    if (raw.open_hours_text) {
-      html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás</div><div>${formatPlain(raw.open_hours_text)}</div></div>`;
-    }
-    if (raw.open_hours_link) {
-      html += `<div class="detail-section detail-link"><div class="detail-section-title">Nyitvatartás link</div><a href="${raw.open_hours_link}" target="_blank" rel="noopener">${raw.open_hours_link}</a></div>`;
-    }
 
-    // Amenities (trips)
-    if (item._type === 'trip') {
-      html += `<div class="detail-section"><div class="detail-section-title">Szolgáltatások</div><div class="detail-amenities">`;
-      const amenities = [
-        ['toilet', '&#128701; WC'],
-        ['parking', '&#127359; Parkoló'],
-        ['buffet', '&#127828; Büfé'],
-        ['dog_allowed', '&#128054; Kutyabarát'],
-        ['carriage', '&#128118; Babakocsival járható'],
-      ];
-      amenities.forEach(([key, label]) => {
+      // Amenities
+      html += '<div class="detail-section">' + secTitle('Szolgáltatások') + '<div class="detail-amenities">';
+      [['toilet', '&#128701; WC'], ['parking', '&#127359; Parkoló'], ['buffet', '&#127828; Büfé'], ['dog_allowed', '&#128054; Kutyabarát'], ['carriage', '&#128118; Babakocsival járható']].forEach(([key, label]) => {
         const active = raw[key] ? '' : ' inactive';
-        html += `<span class="detail-amenity${active}">${label}</span>`;
+        html += '<span class="detail-amenity' + active + '">' + label + '</span>';
       });
-      html += `</div></div>`;
+      html += '</div></div>';
 
-      // Difficulty + duration
-      html += `<div class="detail-section"><div class="detail-section-title">Túra adatok</div>
-        <p>Nehézség: ${'🐾'.repeat(item.difficulty)} (${item.difficulty}/5)</p>
-        <p>Időtartam: ${item.duration} óra</p>
-        ${raw.length ? '<p>Táv: ' + esc(raw.length) + '</p>' : ''}
-      </div>`;
+      // GPS
+      html += '<div class="detail-section">' + secTitle('GPS koordináták') + '<p>' + item.lat.toFixed(6) + ', ' + item.lon.toFixed(6) + '</p></div>';
 
       // Video
       if (raw.video_src) {
-        html += `<div class="detail-section detail-video"><div class="detail-section-title">Videó</div><a href="${raw.video_src}" target="_blank" rel="noopener">&#9654; Videó megtekintése</a></div>`;
+        html += '<div class="detail-section detail-video">' + secTitle('Videó') + '<a href="' + raw.video_src + '" target="_blank" rel="noopener">&#9654; Videó megtekintése</a></div>';
       }
 
       // Reviews
       if (raw.trip_reviews && raw.trip_reviews.length) {
         const visibleReviews = raw.trip_reviews.filter(r => r.review_text && r.visible_trip_page);
         if (visibleReviews.length) {
-          html += `<div class="detail-section"><div class="detail-section-title">Értékelések</div><div class="detail-reviews">`;
+          html += '<div class="detail-section">' + secTitle('Értékelések') + '<div class="detail-reviews">';
           visibleReviews.forEach(r => {
-            html += `<div class="review-item"><div class="review-rating">${'&#11088;'.repeat(r.rating)}</div>${esc(r.review_text)}</div>`;
+            html += '<div class="review-item"><div class="review-rating">' + '&#11088;'.repeat(r.rating) + '</div>' + esc(r.review_text) + '</div>';
           });
-          html += `</div></div>`;
+          html += '</div></div>';
         }
       }
     }
 
-    // Discount dates
-    if (item._type === 'discount') {
-      if (raw.discount_date_start || raw.discount_date_end) {
-        html += `<div class="detail-section"><div class="detail-section-title">Érvényes</div><p>${formatDate(raw.discount_date_start)} - ${formatDate(raw.discount_date_end)}</p></div>`;
+    // CASTLES
+    if (currentCategory === 'castles') {
+      if (raw.popup_image_desktop) {
+        html += '<div class="detail-section"><div class="detail-images">' +
+          '<img src="' + raw.popup_image_desktop + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.style.display=\'none\'" style="width:100%;border-radius:8px;grid-column:1/-1">' +
+          '</div></div>';
       }
+      let address = '';
+      if (raw.postal_code) address += raw.postal_code + ' ';
+      if (item.city) address += item.city;
+      if (raw.address) address += ', ' + raw.address;
+      if (address) {
+        html += '<div class="detail-section">' + secTitle('Cím') + '<p>' + esc(address.trim()) + '</p></div>';
+      }
+      html += '<div class="detail-section">' + secTitle('GPS koordináták') + '<p>' + item.lat.toFixed(6) + ', ' + item.lon.toFixed(6) + '</p></div>';
+    }
+
+    // STAMPS
+    if (currentCategory === 'stamps') {
+      let address = raw.full_address || '';
+      if (!address) {
+        if (raw.zip) address += raw.zip + ' ';
+        if (item.city) address += item.city + ', ';
+        if (raw.address) address += raw.address + ' ';
+        if (raw.address_name) address += raw.address_name;
+      }
+      if (address) {
+        html += '<div class="detail-section">' + secTitle('Cím') + '<p>' + esc(address.trim()) + '</p></div>';
+      }
+      if (item.county) {
+        html += '<div class="detail-section">' + secTitle('Vármegye') + '<p>' + esc(item.county) + '</p></div>';
+      }
+      if (raw.open_hours_text) {
+        html += '<div class="detail-section">' + secTitle('Nyitvatartás') + formatPlain(raw.open_hours_text) + '</div>';
+      }
+      if (raw.open_hours_link) {
+        html += '<div class="detail-section">' + secTitle('Nyitvatartás link') + '<a href="' + raw.open_hours_link + '" target="_blank" rel="noopener" style="color:' + cfg.colorHex + ';text-decoration:underline;font-size:.85rem">' + raw.open_hours_link + '</a></div>';
+      }
+      html += '<div class="detail-section">' + secTitle('GPS koordináták') + '<p>' + item.lat.toFixed(6) + ', ' + item.lon.toFixed(6) + '</p></div>';
     }
 
     detailContent.innerHTML = html;
@@ -1388,23 +1826,147 @@ input[type="range"]::-webkit-slider-thumb {
     detailOverlay.classList.add('open');
   };
 
-  function formatDesc(str) {
-    if (!str) return '';
-    // Already contains HTML tags, just fix line breaks
-    return str.replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+  // =========== BRINGA DETAIL ===========
+  function showBringaDetail(id) {
+    const item = filtered.find(i => i._id === id) || allItems.find(i => i._id === id);
+    if (!item) return;
+    const raw = item._raw;
+    const cfg = CATEGORIES.bringa;
+
+    detailTitle.textContent = item.name;
+    const stColor = cfg.darkHex;
+    const stBorder = cfg.lightHex;
+    function secTitle(title) {
+      return '<div class="detail-section-title" style="color:' + stColor + ';border-bottom-color:' + stBorder + '">' + title + '</div>';
+    }
+
+    let html = '';
+
+    // Cover image
+    if (raw.images && raw.images.cover) {
+      html += '<div class="detail-section"><img src="' + raw.images.cover + '" alt="" style="width:100%;border-radius:8px" onerror="this.style.display=\'none\'"></div>';
+    }
+
+    // Route info
+    html += '<div class="detail-section">' + secTitle('Útvonal adatok') +
+      '<p><strong>Távolság:</strong> ' + esc(raw.length_km) + '</p>' +
+      '<p><strong>Menetidő:</strong> ' + esc(raw.travel_time) + '</p>' +
+      '<p><strong>Nehézség:</strong> ' + esc(raw.difficulty) + '</p>' +
+      '<p><strong>Szintemelkedés:</strong> ' + esc(raw.elevation_m) + '</p>' +
+      '<p><strong>Étkezési lehetőség:</strong> ' + esc(raw.meal_available) + '</p>' +
+    '</div>';
+
+    // Description
+    if (raw.description) {
+      html += '<div class="detail-section">' + secTitle('Leírás') + '<div>' + formatDesc(raw.description) + '</div></div>';
+    }
+
+    // Stamp locations
+    if (raw.stamp_locations && raw.stamp_locations.length) {
+      html += '<div class="detail-section">' + secTitle('Pecsételő helyek') + '<ul class="bringa-stamps-list">';
+      raw.stamp_locations.forEach(sl => {
+        html += '<li data-lat="' + (sl.coordinates ? sl.coordinates.lat : '') + '" data-lng="' + (sl.coordinates ? sl.coordinates.lng : '') + '">' + esc(sl.name) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Route planner link
+    if (raw.route_planner_url) {
+      html += '<div class="detail-section"><a class="bringa-link" href="' + raw.route_planner_url + '" target="_blank" rel="noopener">&#128506; Útvonaltervező megnyitása</a></div>';
+    }
+
+    detailContent.innerHTML = html;
+    detailPanel.classList.add('open');
+    detailOverlay.classList.add('open');
+
+    // Zoom map to route + stamps
+    showBringaOnMap(item);
+
+    // Click stamp location to pan
+    detailContent.querySelectorAll('.bringa-stamps-list li').forEach(li => {
+      li.addEventListener('click', () => {
+        const lat = parseFloat(li.dataset.lat);
+        const lng = parseFloat(li.dataset.lng);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          map.setView([lat, lng], 14, { animate: true });
+        }
+      });
+    });
   }
 
-  function formatPlain(str) {
-    if (!str) return '';
-    return '<p>' + esc(str.replace(/\r\n/g, '\n')).replace(/\n/g, '<br>') + '</p>';
+  function showBringaOnMap(item) {
+    const raw = item._raw;
+    // Clear and add route marker + stamp markers
+    markerLayer.clearLayers();
+    markerMap = {};
+
+    // Start marker
+    const startM = L.marker([item.lat, item.lon], { icon: makeIcon('#1a9988') });
+    startM.bindPopup('<div class="popup-name">' + esc(item.name) + '</div><div class="popup-location">Kiindulópont</div>');
+    markerLayer.addLayer(startM);
+    markerMap[item._id] = startM;
+
+    const bounds = [[item.lat, item.lon]];
+
+    // Stamp locations
+    if (raw.stamp_locations) {
+      raw.stamp_locations.forEach((sl, idx) => {
+        if (sl.coordinates && sl.coordinates.lat && sl.coordinates.lng) {
+          const lat = parseFloat(sl.coordinates.lat);
+          const lng = parseFloat(sl.coordinates.lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const sm = L.marker([lat, lng], { icon: makeNumberedIcon('#1a9988', idx + 1) });
+            sm.bindPopup('<div class="popup-name">' + esc(sl.name) + '</div><div class="popup-location">Pecsételő hely</div>');
+            markerLayer.addLayer(sm);
+            bounds.push([lat, lng]);
+          }
+        }
+      });
+    }
+
+    if (bounds.length > 1) {
+      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 13 });
+    } else {
+      map.setView([item.lat, item.lon], 12, { animate: true });
+    }
   }
 
-  function formatDate(d) {
-    if (!d) return '?';
-    return d.substring(0, 10);
+  // =========== ADVENTURE DETAIL ===========
+  function showAdventureDetail(id) {
+    const item = filtered.find(i => i._id === id);
+    if (!item) return;
+    const raw = item._raw;
+    const cfg = CATEGORIES.adventures;
+
+    detailTitle.textContent = item.name;
+    const stColor = cfg.darkHex;
+    const stBorder = cfg.lightHex;
+    function secTitle(title) {
+      return '<div class="detail-section-title" style="color:' + stColor + ';border-bottom-color:' + stBorder + '">' + title + '</div>';
+    }
+
+    let html = '';
+    html += '<div class="detail-section">' + secTitle('Kaland') + '<p><strong>' + esc(raw.adventure_name) + '</strong></p>';
+    if (raw.adventure_desc) html += '<p>' + esc(raw.adventure_desc) + '</p>';
+    html += '</div>';
+
+    if (raw.quest_name) {
+      html += '<div class="detail-section">' + secTitle('Küldetés') + '<p>' + esc(raw.quest_name) + '</p></div>';
+    }
+
+    if (raw.image) {
+      const imgSrc = raw.image.startsWith('http') ? raw.image : 'https://kajla.hu/' + raw.image.replace(/^\//, '');
+      html += '<div class="detail-section"><img src="' + imgSrc + '" alt="" style="width:100%;border-radius:8px" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+    }
+
+    html += '<div class="detail-section">' + secTitle('GPS koordináták') + '<p>' + item.lat.toFixed(6) + ', ' + item.lon.toFixed(6) + '</p></div>';
+
+    detailContent.innerHTML = html;
+    detailPanel.classList.add('open');
+    detailOverlay.classList.add('open');
   }
 
-  // Close detail
+  // =========== CLOSE DETAIL ===========
   function closeDetail() {
     detailPanel.classList.remove('open');
     detailOverlay.classList.remove('open');
@@ -1412,183 +1974,15 @@ input[type="range"]::-webkit-slider-thumb {
   detailClose.addEventListener('click', closeDetail);
   detailOverlay.addEventListener('click', closeDetail);
 
-  // Type toggles
-  document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const t = chip.dataset.type;
-      typeState[t] = !typeState[t];
-      const colorClass = t === 'trip' ? 'active-green' : t === 'stamp' ? 'active-blue' : t === 'castle' ? 'active-purple' : t === 'adventure' ? 'active-red' : 'active-orange';
-      chip.classList.toggle(colorClass, typeState[t]);
-      // Show/hide sub-filters
-      tripFilters.classList.toggle('visible', typeState.trip);
-      document.getElementById('adventureFilters').classList.toggle('visible', typeState.adventure);
-      if (!typeState.adventure) {
-        selectedAdventure = null;
-        selectedQuest = null;
-        document.getElementById('adventureSelect').value = '';
-        document.getElementById('questSelect').innerHTML = '';
-        document.getElementById('adventureInfo').innerHTML = '';
-        document.getElementById('adventureInfo').classList.remove('visible');
-      }
-      applyFilters();
-    });
-  });
-
-  // Amenity toggles
-  document.querySelectorAll('.amenity-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const a = chip.dataset.amenity;
-      amenityState[a] = !amenityState[a];
-      chip.classList.toggle('active', amenityState[a]);
-      applyFilters();
-    });
-  });
-
-  // Search debounce
-  let searchTimer;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(applyFilters, 250);
-  });
-
-  // Adventure select listener
-  document.getElementById('adventureSelect').addEventListener('change', function() {
-    selectedAdventure = this.value || null;
-    selectedQuest = null;
-    buildQuestChips();
-    applyFilters();
-  });
-
-  function buildQuestChips() {
-    const questArea = document.getElementById('questSelect');
-    const infoArea = document.getElementById('adventureInfo');
-    questArea.innerHTML = '';
-    infoArea.innerHTML = '';
-    infoArea.classList.remove('visible');
-
-    if (!selectedAdventure) return;
-
-    const quests = [...new Set(adventureItems.filter(i => i._adventureSlug === selectedAdventure).map(i => i.description).filter(Boolean))];
-    if (!quests.length) return;
-
-    const label = document.createElement('div');
-    label.className = 'filter-label';
-    label.textContent = 'Küldetés';
-    questArea.appendChild(label);
-
-    quests.forEach(q => {
-      const chip = document.createElement('span');
-      chip.className = 'quest-chip';
-      chip.textContent = q;
-      chip.addEventListener('click', () => {
-        // Deselect all, select this one
-        questArea.querySelectorAll('.quest-chip').forEach(c => c.classList.remove('active'));
-        if (selectedQuest === q) {
-          selectedQuest = null;
-          infoArea.classList.remove('visible');
-        } else {
-          selectedQuest = q;
-          chip.classList.add('active');
-          showQuestInfo();
-        }
-        applyFilters();
-        // Zoom to quest stations
-        if (selectedQuest) {
-          const stations = adventureItems.filter(i => i._adventureSlug === selectedAdventure && i.description === selectedQuest);
-          if (stations.length) {
-            const bounds = L.latLngBounds(stations.map(s => [s.lat, s.lon]));
-            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-          }
-        }
-      });
-      questArea.appendChild(chip);
-    });
-  }
-
-  function showQuestInfo() {
-    const infoArea = document.getElementById('adventureInfo');
-    if (!selectedAdventure || !selectedQuest) {
-      infoArea.classList.remove('visible');
-      return;
-    }
-
-    const stations = adventureItems
-      .filter(i => i._adventureSlug === selectedAdventure && i.description === selectedQuest)
-      .sort((a, b) => {
-        const aId = parseInt(a._raw.station_id) || 0;
-        const bId = parseInt(b._raw.station_id) || 0;
-        return aId - bId;
-      });
-
-    let html = `<div class="quest-title">${esc(selectedQuest)}</div>`;
-
-    // Find adventure description
-    const advMeta = (window._adventureMeta || []).find(a => a.slug === selectedAdventure);
-    if (advMeta && advMeta.desc) {
-      html += `<div class="quest-desc">${esc(advMeta.desc)}</div>`;
-    }
-
-    html += `<div style="font-size:.75rem;color:#888;margin-bottom:6px">${stations.length} állomás</div>`;
-    html += '<ol class="station-list">';
-    stations.forEach(s => {
-      html += `<li data-id="${s._id}">${esc(s.name)}</li>`;
-    });
-    html += '</ol>';
-
-    infoArea.innerHTML = html;
-    infoArea.classList.add('visible');
-
-    // Click station in list -> pan map
-    infoArea.querySelectorAll('.station-list li').forEach(li => {
-      li.addEventListener('click', () => {
-        window._selectItem(li.dataset.id);
-      });
-    });
-  }
-
-  // Other filter listeners
-  countySelect.addEventListener('change', applyFilters);
-  difficultySlider.addEventListener('input', () => {
-    difficultyLabel.textContent = '🐾'.repeat(parseInt(difficultySlider.value));
-    applyFilters();
-  });
-  durationSlider.addEventListener('input', () => {
-    durationLabel.textContent = durationSlider.value + ' óra';
-    applyFilters();
-  });
-
-  // Init
-  async function init() {
-    initMap();
-    try {
-      let data;
-      if (window.__KAJLA_DATA__) {
-        data = window.__KAJLA_DATA__;
-      } else {
-        const resp = await fetch('kajla_data.json');
-        data = await resp.json();
-      }
-      allItems = processData(data);
-      tripFilters.classList.add('visible');
-      applyFilters();
-    } catch (e) {
-      resultCount.textContent = 'Hiba történt az adatok betöltésekor.';
-      console.error(e);
-    }
-    loadingScreen.classList.add('hidden');
-    setTimeout(() => { map.invalidateSize(); }, 300);
-  }
-
-  // Mobile sidebar drag / collapse
+  // =========== MOBILE SIDEBAR DRAG ===========
   function setupMobileSidebar() {
-    const sidebar = document.querySelector('.sidebar');
+    const sidebar = $('sidebar');
     if (!sidebar || window.innerWidth > 800) return;
 
     let startY = 0, startH = 0, dragging = false;
 
     function onStart(e) {
       const y = e.touches ? e.touches[0].clientY : e.clientY;
-      // Only start drag from the top area (handle + filters)
       const rect = sidebar.getBoundingClientRect();
       if (y < rect.top || y > rect.top + 40) return;
       dragging = true;
@@ -1616,13 +2010,10 @@ input[type="range"]::-webkit-slider-thumb {
         sidebar.style.height = '';
       } else {
         sidebar.classList.remove('collapsed');
-        if (h > vh * 0.6) {
-          sidebar.style.height = '70vh';
-        } else if (h < vh * 0.25) {
-          sidebar.style.height = '45vh';
-        }
+        if (h > vh * 0.6) sidebar.style.height = '70vh';
+        else if (h < vh * 0.25) sidebar.style.height = '45vh';
       }
-      setTimeout(() => map.invalidateSize(), 350);
+      if (map) setTimeout(() => map.invalidateSize(), 350);
     }
 
     sidebar.addEventListener('touchstart', onStart, { passive: false });
@@ -1632,21 +2023,39 @@ input[type="range"]::-webkit-slider-thumb {
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
 
-    // Tap on collapsed sidebar to expand
     sidebar.addEventListener('click', (e) => {
       if (sidebar.classList.contains('collapsed')) {
         sidebar.classList.remove('collapsed');
         sidebar.style.height = '45vh';
-        setTimeout(() => map.invalidateSize(), 350);
+        if (map) setTimeout(() => map.invalidateSize(), 350);
       }
     });
   }
 
+  // =========== INIT ===========
+  async function init() {
+    try {
+      let data;
+      if (window.__KAJLA_DATA__) {
+        data = window.__KAJLA_DATA__;
+      } else {
+        const resp = await fetch('kajla_data.json');
+        data = await resp.json();
+      }
+      rawData = data;
+      buildZipMedian(data);
+      renderCategoryScreen();
+    } catch (e) {
+      console.error(e);
+      catGrid.innerHTML = '<p style="color:var(--red);padding:20px">Hiba történt az adatok betöltésekor.</p>';
+    }
+    loadingScreen.classList.add('hidden');
+  }
+
   init();
-  setupMobileSidebar();
   window.addEventListener('resize', () => {
     setupMobileSidebar();
-    map.invalidateSize();
+    if (map) map.invalidateSize();
   });
 })();
 </script>
