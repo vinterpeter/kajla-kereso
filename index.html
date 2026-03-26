@@ -167,6 +167,33 @@ select.filter-select:focus { border-color: var(--green-mid); }
 }
 .trip-filters.visible { display: flex; }
 
+.adventure-filters {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+.adventure-filters.visible { display: flex; }
+.adventure-chip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: .78rem;
+  cursor: pointer;
+  border: 1.5px solid #ddd;
+  background: #f8f8f8;
+  color: #888;
+  transition: var(--transition);
+  user-select: none;
+}
+.adventure-chip-tag.active {
+  border-color: var(--red);
+  background: var(--red-light);
+  color: var(--red);
+}
+
 .difficulty-display {
   display: flex;
   align-items: center;
@@ -560,6 +587,11 @@ input[type="range"]::-webkit-slider-thumb {
           </label>
         </div>
 
+        <div class="adventure-filters" id="adventureFilters">
+          <div class="filter-label">Kaland szűrők</div>
+          <div class="amenity-toggles" id="adventureToggles"></div>
+        </div>
+
         <div class="filter-row">
           <div class="filter-label">Vármegye</div>
           <select id="countySelect" class="filter-select">
@@ -636,6 +668,8 @@ input[type="range"]::-webkit-slider-thumb {
   const typeState = { trip: true, stamp: true, discount: true, castle: true, adventure: true };
   // Amenity filter state
   const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
+  // Adventure filter state (populated dynamically)
+  const adventureState = {};
 
   // DOM refs
   const $ = id => document.getElementById(id);
@@ -864,15 +898,19 @@ input[type="range"]::-webkit-slider-thumb {
     });
 
     // Adventures (stations from kajla-kalandok)
+    const adventureNames = [];
     (data.adventuresData || []).forEach(adv => {
+      const uSlug = adv.unique_slug || adv.slug;
+      adventureNames.push({ slug: uSlug, name: adv.name });
       (adv.stations || []).forEach(s => {
         const lat = parseFloat(s.lat);
         const lon = parseFloat(s.lng);
         if (isNaN(lat) || isNaN(lon)) return;
         items.push({
           _type: 'adventure',
-          _id: 'adv_' + adv.slug + '_' + s.id + '_' + s.quest_id,
-          _raw: { ...s, adventure_name: adv.name, adventure_slug: adv.slug, adventure_desc: adv.description, adventure_image: adv.image },
+          _adventureSlug: uSlug,
+          _id: 'adv_' + uSlug + '_' + s.id + '_' + s.quest_id,
+          _raw: { ...s, adventure_name: adv.name, adventure_slug: uSlug, adventure_desc: adv.description, adventure_image: adv.image },
           name: s.station_name || s.quest_name || '',
           city: adv.slug.charAt(0).toUpperCase() + adv.slug.slice(1),
           county: '',
@@ -881,6 +919,23 @@ input[type="range"]::-webkit-slider-thumb {
           lat, lon,
         });
       });
+    });
+
+    // Build adventure filter chips
+    const togglesEl = document.getElementById('adventureToggles');
+    togglesEl.innerHTML = '';
+    adventureNames.forEach(a => {
+      adventureState[a.slug] = true;
+      const chip = document.createElement('span');
+      chip.className = 'adventure-chip-tag active';
+      chip.dataset.slug = a.slug;
+      chip.textContent = a.name;
+      chip.addEventListener('click', () => {
+        adventureState[a.slug] = !adventureState[a.slug];
+        chip.classList.toggle('active', adventureState[a.slug]);
+        applyFilters();
+      });
+      togglesEl.appendChild(chip);
     });
 
     // Populate county dropdown
@@ -927,6 +982,9 @@ input[type="range"]::-webkit-slider-thumb {
           }
         }
       }
+      if (item._type === 'adventure' && item._adventureSlug) {
+        if (!adventureState[item._adventureSlug]) return false;
+      }
       return true;
     });
 
@@ -957,8 +1015,8 @@ input[type="range"]::-webkit-slider-thumb {
       let venueHtml = '';
       if (item._type === 'discount' && item.venue) {
         venueHtml = `<div class="card-venue">${esc(item.venue)}</div>`;
-      } else if (item._type === 'adventure' && item.description) {
-        venueHtml = `<div class="card-venue">${esc(item.description)}</div>`;
+      } else if (item._type === 'adventure') {
+        venueHtml = `<div class="card-venue">${esc(item._raw.adventure_name)}${item.description ? ' — ' + esc(item.description) : ''}</div>`;
       }
 
       let meta = '';
@@ -1224,9 +1282,9 @@ input[type="range"]::-webkit-slider-thumb {
       typeState[t] = !typeState[t];
       const colorClass = t === 'trip' ? 'active-green' : t === 'stamp' ? 'active-blue' : t === 'castle' ? 'active-purple' : t === 'adventure' ? 'active-red' : 'active-orange';
       chip.classList.toggle(colorClass, typeState[t]);
-      // Show/hide trip filters
-      const tripsOn = typeState.trip;
-      tripFilters.classList.toggle('visible', tripsOn);
+      // Show/hide sub-filters
+      tripFilters.classList.toggle('visible', typeState.trip);
+      document.getElementById('adventureFilters').classList.toggle('visible', typeState.adventure);
       applyFilters();
     });
   });
@@ -1272,6 +1330,7 @@ input[type="range"]::-webkit-slider-thumb {
       }
       allItems = processData(data);
       tripFilters.classList.add('visible');
+      document.getElementById('adventureFilters').classList.add('visible');
       applyFilters();
     } catch (e) {
       resultCount.textContent = 'Hiba történt az adatok betöltésekor.';
