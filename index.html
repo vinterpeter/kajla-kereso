@@ -1519,7 +1519,7 @@ input[type="range"]::-webkit-slider-thumb {
         thumb = '<img class="card-thumb" src="' + item.thumb + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
       if (currentCategory === 'castles' && item._raw.photo_image) {
-        thumb = '<img class="card-thumb" src="' + item._raw.photo_image + '" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="border-radius:50%;object-fit:cover">';
+        thumb = '<img class="card-thumb" src="' + item._raw.photo_image + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
       if (currentCategory === 'bringa' && item._raw.images && item._raw.images.list) {
         thumb = '<img class="card-thumb" src="' + item._raw.images.list + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
@@ -1791,8 +1791,8 @@ input[type="range"]::-webkit-slider-thumb {
     // CASTLES
     if (currentCategory === 'castles') {
       if (raw.photo_image) {
-        html += '<div class="detail-section" style="text-align:center">' +
-          '<img src="' + raw.photo_image + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.style.display=\'none\'" style="width:180px;height:180px;border-radius:50%;object-fit:cover;border:4px solid var(--purple-light);box-shadow:0 4px 12px rgba(0,0,0,.15)">' +
+        html += '<div class="detail-section">' +
+          '<img src="' + raw.photo_image + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.style.display=\'none\'" style="width:100%;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.15)">' +
           '</div>';
       }
       if (raw.popup_text) {
