@@ -174,21 +174,79 @@ select.filter-select:focus { border-color: var(--green-mid); }
   padding-top: 4px;
 }
 .adventure-filters.visible { display: flex; }
-.adventure-chip-tag {
+.adventure-group {
+  border: 1.5px solid #eee;
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+.adventure-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #333;
+  transition: background var(--transition);
+}
+.adventure-group-header:hover { background: #fafafa; }
+.adventure-group-header .adv-toggle {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--red);
+  background: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.adventure-group-header .adv-toggle::after {
+  content: '✓';
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.adventure-group-header .adv-toggle.off {
+  background: #fff;
+  border-color: #ccc;
+}
+.adventure-group-header .adv-toggle.off::after { content: ''; }
+.adventure-group-header .adv-arrow {
+  margin-left: auto;
+  font-size: .7rem;
+  color: #999;
+  transition: transform var(--transition);
+}
+.adventure-group-header .adv-arrow.open { transform: rotate(180deg); }
+.adventure-group-header .adv-count {
+  font-size: .7rem;
+  color: #999;
+  font-weight: 400;
+}
+.adventure-quests {
+  display: none;
+  padding: 0 12px 8px;
+}
+.adventure-quests.open { display: block; }
+.quest-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: .78rem;
+  padding: 3px 9px;
+  border-radius: 14px;
+  font-size: .72rem;
   cursor: pointer;
   border: 1.5px solid #ddd;
   background: #f8f8f8;
   color: #888;
-  transition: var(--transition);
+  transition: all var(--transition);
   user-select: none;
+  margin: 2px;
 }
-.adventure-chip-tag.active {
+.quest-chip.active {
   border-color: var(--red);
   background: var(--red-light);
   color: var(--red);
@@ -559,7 +617,11 @@ input[type="range"]::-webkit-slider-thumb {
 
   .trip-filters { gap: 5px; }
   .adventure-filters { gap: 5px; }
-  .adventure-chip-tag { padding: 3px 8px; font-size: .7rem; }
+  .adventure-group-header { padding: 5px 10px; font-size: .76rem; }
+  .adventure-group-header .adv-toggle { width: 16px; height: 16px; }
+  .adventure-group-header .adv-count { font-size: .65rem; }
+  .adventure-quests { padding: 0 10px 6px; }
+  .quest-chip { padding: 2px 7px; font-size: .66rem; }
   .amenity-chip { padding: 3px 8px; font-size: .68rem; }
 
   select.filter-select { padding: 5px 8px; font-size: .78rem; }
@@ -741,6 +803,7 @@ input[type="range"]::-webkit-slider-thumb {
   const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
   // Adventure filter state (populated dynamically)
   const adventureState = {};
+  const questState = {};
 
   // DOM refs
   const $ = id => document.getElementById(id);
@@ -992,21 +1055,73 @@ input[type="range"]::-webkit-slider-thumb {
       });
     });
 
-    // Build adventure filter chips
+    // Build adventure filter groups with quest dropdowns
     const togglesEl = document.getElementById('adventureToggles');
     togglesEl.innerHTML = '';
     adventureNames.forEach(a => {
       adventureState[a.slug] = true;
-      const chip = document.createElement('span');
-      chip.className = 'adventure-chip-tag active';
-      chip.dataset.slug = a.slug;
-      chip.textContent = a.name;
-      chip.addEventListener('click', () => {
+      // Collect unique quests for this adventure
+      const quests = [...new Set(items.filter(i => i._adventureSlug === a.slug).map(i => i.description).filter(Boolean))].sort();
+      quests.forEach(q => { questState[a.slug + '||' + q] = true; });
+
+      const group = document.createElement('div');
+      group.className = 'adventure-group';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'adventure-group-header';
+      const toggle = document.createElement('span');
+      toggle.className = 'adv-toggle';
+      const nameEl = document.createElement('span');
+      nameEl.textContent = a.name;
+      const count = document.createElement('span');
+      count.className = 'adv-count';
+      count.textContent = quests.length + ' küldetés';
+      const arrow = document.createElement('span');
+      arrow.className = 'adv-arrow';
+      arrow.textContent = '▼';
+      header.append(toggle, nameEl, count, arrow);
+
+      // Quest list
+      const questsEl = document.createElement('div');
+      questsEl.className = 'adventure-quests';
+      quests.forEach(q => {
+        const key = a.slug + '||' + q;
+        const chip = document.createElement('span');
+        chip.className = 'quest-chip active';
+        chip.textContent = q;
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          questState[key] = !questState[key];
+          chip.classList.toggle('active', questState[key]);
+          // Update adventure toggle based on quest states
+          const allOff = quests.every(qq => !questState[a.slug + '||' + qq]);
+          const anyOn = quests.some(qq => questState[a.slug + '||' + qq]);
+          adventureState[a.slug] = anyOn;
+          toggle.classList.toggle('off', !anyOn);
+          applyFilters();
+        });
+        questsEl.appendChild(chip);
+      });
+
+      // Toggle adventure on/off
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
         adventureState[a.slug] = !adventureState[a.slug];
-        chip.classList.toggle('active', adventureState[a.slug]);
+        toggle.classList.toggle('off', !adventureState[a.slug]);
+        quests.forEach(q => { questState[a.slug + '||' + q] = adventureState[a.slug]; });
+        questsEl.querySelectorAll('.quest-chip').forEach(c => c.classList.toggle('active', adventureState[a.slug]));
         applyFilters();
       });
-      togglesEl.appendChild(chip);
+
+      // Expand/collapse quests
+      header.addEventListener('click', () => {
+        questsEl.classList.toggle('open');
+        arrow.classList.toggle('open');
+      });
+
+      group.append(header, questsEl);
+      togglesEl.appendChild(group);
     });
 
     // Populate county dropdown
@@ -1055,6 +1170,8 @@ input[type="range"]::-webkit-slider-thumb {
       }
       if (item._type === 'adventure' && item._adventureSlug) {
         if (!adventureState[item._adventureSlug]) return false;
+        const qKey = item._adventureSlug + '||' + item.description;
+        if (qKey in questState && !questState[qKey]) return false;
       }
       return true;
     });
