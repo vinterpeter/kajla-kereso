@@ -83,7 +83,8 @@ body {
   border-bottom: 1px solid #eee;
   background: var(--earth-pale);
   overflow-y: auto;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .search-box {
@@ -174,83 +175,80 @@ select.filter-select:focus { border-color: var(--green-mid); }
   padding-top: 4px;
 }
 .adventure-filters.visible { display: flex; }
-.adventure-group {
-  border: 1.5px solid #eee;
-  border-radius: var(--radius);
-  margin-bottom: 6px;
-  background: #fff;
-  overflow: hidden;
+.quest-select-area {
+  margin-top: 8px;
 }
-.adventure-group-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  cursor: pointer;
-  user-select: none;
-  font-size: .82rem;
-  font-weight: 600;
-  color: #333;
-  transition: background var(--transition);
-}
-.adventure-group-header:hover { background: #fafafa; }
-.adventure-group-header .adv-toggle {
-  width: 18px; height: 18px;
-  border-radius: 4px;
-  border: 2px solid var(--red);
-  background: var(--red);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: all var(--transition);
-}
-.adventure-group-header .adv-toggle::after {
-  content: '✓';
-  color: #fff;
-  font-size: .7rem;
-  font-weight: 700;
-}
-.adventure-group-header .adv-toggle.off {
-  background: #fff;
-  border-color: #ccc;
-}
-.adventure-group-header .adv-toggle.off::after { content: ''; }
-.adventure-group-header .adv-arrow {
-  margin-left: auto;
-  font-size: .7rem;
-  color: #999;
-  transition: transform var(--transition);
-}
-.adventure-group-header .adv-arrow.open { transform: rotate(180deg); }
-.adventure-group-header .adv-count {
-  font-size: .7rem;
-  color: #999;
-  font-weight: 400;
-}
-.adventure-quests {
-  display: none;
-  padding: 0 12px 8px;
-}
-.adventure-quests.open { display: block; }
+.quest-select-area .filter-label { margin-bottom: 4px; }
 .quest-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 9px;
-  border-radius: 14px;
-  font-size: .72rem;
+  padding: 5px 11px;
+  border-radius: 16px;
+  font-size: .76rem;
   cursor: pointer;
   border: 1.5px solid #ddd;
-  background: #f8f8f8;
-  color: #888;
+  background: #fff;
+  color: #666;
   transition: all var(--transition);
   user-select: none;
   margin: 2px;
 }
+.quest-chip:hover { border-color: var(--red); }
 .quest-chip.active {
   border-color: var(--red);
-  background: var(--red-light);
-  color: var(--red);
+  background: var(--red);
+  color: #fff;
+  font-weight: 600;
 }
+.adventure-info {
+  margin-top: 10px;
+  display: none;
+}
+.adventure-info.visible { display: block; }
+.adventure-info .quest-title {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+.adventure-info .quest-desc {
+  font-size: .8rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+.station-list {
+  list-style: none;
+  counter-reset: station;
+}
+.station-list li {
+  counter-increment: station;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: .82rem;
+  color: #333;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.station-list li:hover { background: var(--red-light); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+.station-list li::before {
+  content: counter(station);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.station-list li:last-child { border-bottom: none; }
 
 .difficulty-display {
   display: flex;
@@ -617,11 +615,11 @@ input[type="range"]::-webkit-slider-thumb {
 
   .trip-filters { gap: 5px; }
   .adventure-filters { gap: 5px; }
-  .adventure-group-header { padding: 5px 10px; font-size: .76rem; }
-  .adventure-group-header .adv-toggle { width: 16px; height: 16px; }
-  .adventure-group-header .adv-count { font-size: .65rem; }
-  .adventure-quests { padding: 0 10px 6px; }
-  .quest-chip { padding: 2px 7px; font-size: .66rem; }
+  .quest-chip { padding: 3px 8px; font-size: .68rem; }
+  .station-list li { font-size: .76rem; padding: 6px 0; }
+  .station-list li::before { min-width: 20px; height: 20px; font-size: .62rem; }
+  .adventure-info .quest-title { font-size: .82rem; }
+  .adventure-info .quest-desc { font-size: .74rem; }
   .amenity-chip { padding: 3px 8px; font-size: .68rem; }
 
   select.filter-select { padding: 5px 8px; font-size: .78rem; }
@@ -721,8 +719,12 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
 
         <div class="adventure-filters" id="adventureFilters">
-          <div class="filter-label">Kaland szűrők</div>
-          <div class="amenity-toggles" id="adventureToggles"></div>
+          <div class="filter-label">Kalandkönyv</div>
+          <select id="adventureSelect" class="filter-select">
+            <option value="">Válassz kalandkönyvet...</option>
+          </select>
+          <div id="questSelect" class="quest-select-area"></div>
+          <div id="adventureInfo" class="adventure-info"></div>
         </div>
 
         <div class="filter-row">
@@ -801,9 +803,10 @@ input[type="range"]::-webkit-slider-thumb {
   const typeState = { trip: true, stamp: true, discount: true, castle: true, adventure: true };
   // Amenity filter state
   const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
-  // Adventure filter state (populated dynamically)
-  const adventureState = {};
-  const questState = {};
+  // Adventure filter state
+  let selectedAdventure = null; // slug of selected adventure book
+  let selectedQuest = null; // quest name within adventure
+  let adventureItems = []; // all adventure items for lookup
 
   // DOM refs
   const $ = id => document.getElementById(id);
@@ -1035,7 +1038,7 @@ input[type="range"]::-webkit-slider-thumb {
     const adventureNames = [];
     (data.adventuresData || []).forEach(adv => {
       const uSlug = adv.unique_slug || adv.slug;
-      adventureNames.push({ slug: uSlug, name: adv.name });
+      adventureNames.push({ slug: uSlug, name: adv.name, desc: adv.description || '' });
       (adv.stations || []).forEach(s => {
         const lat = parseFloat(s.lat);
         const lon = parseFloat(s.lng);
@@ -1055,74 +1058,19 @@ input[type="range"]::-webkit-slider-thumb {
       });
     });
 
-    // Build adventure filter groups with quest dropdowns
-    const togglesEl = document.getElementById('adventureToggles');
-    togglesEl.innerHTML = '';
+    // Build adventure dropdown
+    const advSelect = document.getElementById('adventureSelect');
+    advSelect.innerHTML = '<option value="">Válassz kalandkönyvet...</option>';
     adventureNames.forEach(a => {
-      adventureState[a.slug] = true;
-      // Collect unique quests for this adventure
-      const quests = [...new Set(items.filter(i => i._adventureSlug === a.slug).map(i => i.description).filter(Boolean))].sort();
-      quests.forEach(q => { questState[a.slug + '||' + q] = true; });
-
-      const group = document.createElement('div');
-      group.className = 'adventure-group';
-
-      // Header
-      const header = document.createElement('div');
-      header.className = 'adventure-group-header';
-      const toggle = document.createElement('span');
-      toggle.className = 'adv-toggle';
-      const nameEl = document.createElement('span');
-      nameEl.textContent = a.name;
-      const count = document.createElement('span');
-      count.className = 'adv-count';
-      count.textContent = quests.length + ' küldetés';
-      const arrow = document.createElement('span');
-      arrow.className = 'adv-arrow';
-      arrow.textContent = '▼';
-      header.append(toggle, nameEl, count, arrow);
-
-      // Quest list
-      const questsEl = document.createElement('div');
-      questsEl.className = 'adventure-quests';
-      quests.forEach(q => {
-        const key = a.slug + '||' + q;
-        const chip = document.createElement('span');
-        chip.className = 'quest-chip active';
-        chip.textContent = q;
-        chip.addEventListener('click', (e) => {
-          e.stopPropagation();
-          questState[key] = !questState[key];
-          chip.classList.toggle('active', questState[key]);
-          // Update adventure toggle based on quest states
-          const allOff = quests.every(qq => !questState[a.slug + '||' + qq]);
-          const anyOn = quests.some(qq => questState[a.slug + '||' + qq]);
-          adventureState[a.slug] = anyOn;
-          toggle.classList.toggle('off', !anyOn);
-          applyFilters();
-        });
-        questsEl.appendChild(chip);
-      });
-
-      // Toggle adventure on/off
-      toggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        adventureState[a.slug] = !adventureState[a.slug];
-        toggle.classList.toggle('off', !adventureState[a.slug]);
-        quests.forEach(q => { questState[a.slug + '||' + q] = adventureState[a.slug]; });
-        questsEl.querySelectorAll('.quest-chip').forEach(c => c.classList.toggle('active', adventureState[a.slug]));
-        applyFilters();
-      });
-
-      // Expand/collapse quests
-      header.addEventListener('click', () => {
-        questsEl.classList.toggle('open');
-        arrow.classList.toggle('open');
-      });
-
-      group.append(header, questsEl);
-      togglesEl.appendChild(group);
+      const opt = document.createElement('option');
+      opt.value = a.slug;
+      opt.textContent = a.name;
+      advSelect.appendChild(opt);
     });
+
+    // Store adventure metadata for quest building
+    window._adventureMeta = adventureNames;
+    adventureItems = items.filter(i => i._type === 'adventure');
 
     // Populate county dropdown
     const sorted = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
@@ -1168,10 +1116,11 @@ input[type="range"]::-webkit-slider-thumb {
           }
         }
       }
-      if (item._type === 'adventure' && item._adventureSlug) {
-        if (!adventureState[item._adventureSlug]) return false;
-        const qKey = item._adventureSlug + '||' + item.description;
-        if (qKey in questState && !questState[qKey]) return false;
+      if (item._type === 'adventure') {
+        // Only show if an adventure + quest is selected
+        if (!selectedAdventure || !selectedQuest) return false;
+        if (item._adventureSlug !== selectedAdventure) return false;
+        if (item.description !== selectedQuest) return false;
       }
       return true;
     });
@@ -1473,6 +1422,14 @@ input[type="range"]::-webkit-slider-thumb {
       // Show/hide sub-filters
       tripFilters.classList.toggle('visible', typeState.trip);
       document.getElementById('adventureFilters').classList.toggle('visible', typeState.adventure);
+      if (!typeState.adventure) {
+        selectedAdventure = null;
+        selectedQuest = null;
+        document.getElementById('adventureSelect').value = '';
+        document.getElementById('questSelect').innerHTML = '';
+        document.getElementById('adventureInfo').innerHTML = '';
+        document.getElementById('adventureInfo').classList.remove('visible');
+      }
       applyFilters();
     });
   });
@@ -1493,6 +1450,101 @@ input[type="range"]::-webkit-slider-thumb {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(applyFilters, 250);
   });
+
+  // Adventure select listener
+  document.getElementById('adventureSelect').addEventListener('change', function() {
+    selectedAdventure = this.value || null;
+    selectedQuest = null;
+    buildQuestChips();
+    applyFilters();
+  });
+
+  function buildQuestChips() {
+    const questArea = document.getElementById('questSelect');
+    const infoArea = document.getElementById('adventureInfo');
+    questArea.innerHTML = '';
+    infoArea.innerHTML = '';
+    infoArea.classList.remove('visible');
+
+    if (!selectedAdventure) return;
+
+    const quests = [...new Set(adventureItems.filter(i => i._adventureSlug === selectedAdventure).map(i => i.description).filter(Boolean))];
+    if (!quests.length) return;
+
+    const label = document.createElement('div');
+    label.className = 'filter-label';
+    label.textContent = 'Küldetés';
+    questArea.appendChild(label);
+
+    quests.forEach(q => {
+      const chip = document.createElement('span');
+      chip.className = 'quest-chip';
+      chip.textContent = q;
+      chip.addEventListener('click', () => {
+        // Deselect all, select this one
+        questArea.querySelectorAll('.quest-chip').forEach(c => c.classList.remove('active'));
+        if (selectedQuest === q) {
+          selectedQuest = null;
+          infoArea.classList.remove('visible');
+        } else {
+          selectedQuest = q;
+          chip.classList.add('active');
+          showQuestInfo();
+        }
+        applyFilters();
+        // Zoom to quest stations
+        if (selectedQuest) {
+          const stations = adventureItems.filter(i => i._adventureSlug === selectedAdventure && i.description === selectedQuest);
+          if (stations.length) {
+            const bounds = L.latLngBounds(stations.map(s => [s.lat, s.lon]));
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+          }
+        }
+      });
+      questArea.appendChild(chip);
+    });
+  }
+
+  function showQuestInfo() {
+    const infoArea = document.getElementById('adventureInfo');
+    if (!selectedAdventure || !selectedQuest) {
+      infoArea.classList.remove('visible');
+      return;
+    }
+
+    const stations = adventureItems
+      .filter(i => i._adventureSlug === selectedAdventure && i.description === selectedQuest)
+      .sort((a, b) => {
+        const aId = parseInt(a._raw.station_id) || 0;
+        const bId = parseInt(b._raw.station_id) || 0;
+        return aId - bId;
+      });
+
+    let html = `<div class="quest-title">${esc(selectedQuest)}</div>`;
+
+    // Find adventure description
+    const advMeta = (window._adventureMeta || []).find(a => a.slug === selectedAdventure);
+    if (advMeta && advMeta.desc) {
+      html += `<div class="quest-desc">${esc(advMeta.desc)}</div>`;
+    }
+
+    html += `<div style="font-size:.75rem;color:#888;margin-bottom:6px">${stations.length} állomás</div>`;
+    html += '<ol class="station-list">';
+    stations.forEach(s => {
+      html += `<li data-id="${s._id}">${esc(s.name)}</li>`;
+    });
+    html += '</ol>';
+
+    infoArea.innerHTML = html;
+    infoArea.classList.add('visible');
+
+    // Click station in list -> pan map
+    infoArea.querySelectorAll('.station-list li').forEach(li => {
+      li.addEventListener('click', () => {
+        window._selectItem(li.dataset.id);
+      });
+    });
+  }
 
   // Other filter listeners
   countySelect.addEventListener('change', applyFilters);
@@ -1518,7 +1570,6 @@ input[type="range"]::-webkit-slider-thumb {
       }
       allItems = processData(data);
       tripFilters.classList.add('visible');
-      document.getElementById('adventureFilters').classList.add('visible');
       applyFilters();
     } catch (e) {
       resultCount.textContent = 'Hiba történt az adatok betöltésekor.';
