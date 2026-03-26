@@ -1673,6 +1673,11 @@ input[type="range"]::-webkit-slider-thumb {
         setTimeout(() => marker.openPopup(), 350);
       }
     }
+
+    // Kastélyoknál automatikusan nyissuk meg a részleteket
+    if (currentCategory === 'castles') {
+      window._showDetail(id);
+    }
   };
 
   window._loadMore = function() {
