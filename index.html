@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kajla Célpont Kereső</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green-dark: #2d5a27;
+  --green-mid: #4a8c3f;
+  --green-light: #6db65b;
+  --green-pale: #e8f5e3;
+  --earth-dark: #5c4a32;
+  --earth-mid: #8b7355;
+  --earth-light: #c4a882;
+  --earth-pale: #f5f0e8;
+  --orange: #e8913a;
+  --orange-light: #fdf0e0;
+  --blue: #3a7ec8;
+  --blue-light: #e0eef8;
+  --shadow: 0 2px 12px rgba(0,0,0,.12);
+  --radius: 10px;
+  --transition: .25s ease;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--earth-pale);
+  color: #333;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- LAYOUT ---- */
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.header {
+  background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+  color: #fff;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  flex-shrink: 0;
+}
+.header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: .5px; }
+.header .subtitle { font-size: .8rem; opacity: .85; font-weight: 400; }
+.header .logo-icon {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0;
+}
+
+.main { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 420px; min-width: 420px;
+  background: #fff;
+  display: flex; flex-direction: column;
+  border-right: 1px solid #e0ddd5;
+  z-index: 500;
+  transition: var(--transition);
+}
+
+.map-container { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; }
+
+/* ---- FILTERS ---- */
+.filters {
+  padding: 16px 18px;
+  border-bottom: 1px solid #eee;
+  background: var(--earth-pale);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 12px;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border: 2px solid #ddd;
+  border-radius: var(--radius);
+  font-size: .9rem;
+  outline: none;
+  transition: border-color var(--transition);
+  background: #fff;
+}
+.search-box input:focus { border-color: var(--green-mid); }
+.search-box .search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: #999; font-size: 1rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.filter-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--earth-dark);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: .8rem;
+  cursor: pointer;
+  border: 2px solid #ddd;
+  background: #fff;
+  transition: all var(--transition);
+  user-select: none;
+}
+.chip.active-green { border-color: var(--green-mid); background: var(--green-pale); color: var(--green-dark); }
+.chip.active-blue { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+.chip.active-orange { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+select.filter-select {
+  padding: 7px 10px;
+  border: 2px solid #ddd;
+  border-radius: var(--radius);
+  font-size: .82rem;
+  background: #fff;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+select.filter-select:focus { border-color: var(--green-mid); }
+
+/* Trip-specific filters */
+.trip-filters {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+.trip-filters.visible { display: flex; }
+
+.difficulty-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.difficulty-display span { font-size: .8rem; color: #666; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  cursor: pointer;
+}
+
+.amenity-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.amenity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: .75rem;
+  cursor: pointer;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  transition: all var(--transition);
+  user-select: none;
+}
+.amenity-chip.active {
+  border-color: var(--green-mid);
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+
+.result-count {
+  padding: 8px 18px;
+  font-size: .8rem;
+  color: #888;
+  background: #fafaf7;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+.result-count strong { color: var(--green-dark); }
+
+/* ---- RESULTS LIST ---- */
+.results-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.results-list {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-card {
+  background: #fff;
+  border: 1.5px solid #eee;
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.result-card:hover { border-color: var(--green-light); box-shadow: var(--shadow); transform: translateY(-1px); }
+.result-card.selected { border-color: var(--green-mid); background: var(--green-pale); }
+
+.card-thumb {
+  width: 64px; height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+}
+
+.card-body { flex: 1; min-width: 0; }
+
+.card-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+.badge-trip { background: var(--green-pale); color: var(--green-dark); }
+.badge-stamp { background: var(--blue-light); color: var(--blue); }
+.badge-discount { background: var(--orange-light); color: var(--orange); }
+
+.card-name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-venue {
+  font-size: .78rem;
+  color: #888;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-location {
+  font-size: .78rem;
+  color: #888;
+}
+.card-meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: .75rem;
+  color: #666;
+}
+
+.load-more-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0 16px;
+  border: 2px dashed var(--green-mid);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--green-mid);
+  font-weight: 600;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.load-more-btn:hover { background: var(--green-pale); }
+
+/* ---- DETAIL PANEL ---- */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.detail-overlay.open { opacity: 1; pointer-events: auto; }
+
+.detail-panel {
+  position: fixed;
+  top: 0; left: 0;
+  width: 480px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 2001;
+  transform: translateX(-100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0,0,0,.2);
+}
+.detail-panel.open { transform: translateX(0); }
+
+.detail-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+  color: #fff;
+  flex-shrink: 0;
+}
+.detail-header h2 { font-size: 1.1rem; flex: 1; line-height: 1.3; }
+.detail-close {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,.2);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.detail-close:hover { background: rgba(255,255,255,.35); }
+
+.detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.detail-section { margin-bottom: 18px; }
+.detail-section-title {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--green-dark);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--green-pale);
+}
+.detail-section p, .detail-section div { font-size: .88rem; line-height: 1.6; color: #444; }
+
+.detail-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.detail-amenity {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: .78rem;
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+.detail-amenity.inactive { background: #f0f0f0; color: #aaa; text-decoration: line-through; }
+
+.detail-images {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.detail-images img {
+  width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+.detail-images img:hover { transform: scale(1.03); }
+.detail-images img:first-child { grid-column: 1 / -1; }
+
+.detail-video a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ff0000;
+  color: #fff;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 600;
+  transition: opacity var(--transition);
+}
+.detail-video a:hover { opacity: .85; }
+
+.detail-link a {
+  color: var(--green-mid);
+  text-decoration: underline;
+  font-size: .85rem;
+}
+
+.detail-reviews { display: flex; flex-direction: column; gap: 8px; }
+.review-item {
+  padding: 10px;
+  background: #fafaf7;
+  border-radius: 8px;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.review-rating { color: var(--orange); margin-bottom: 3px; }
+
+/* ---- LEAFLET CUSTOM ---- */
+.leaflet-popup-content-wrapper { border-radius: var(--radius) !important; }
+.leaflet-popup-content { margin: 12px 16px !important; font-size: .85rem; line-height: 1.5; }
+.popup-name { font-weight: 700; font-size: .9rem; margin-bottom: 3px; }
+.popup-location { color: #666; font-size: .8rem; margin-bottom: 6px; }
+.popup-btn {
+  display: inline-block;
+  padding: 5px 14px;
+  background: var(--green-mid);
+  color: #fff;
+  border-radius: 16px;
+  text-decoration: none;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.popup-btn:hover { background: var(--green-dark); }
+
+.marker-trip { background-color: var(--green-mid); }
+.marker-stamp { background-color: var(--blue); }
+.marker-discount { background-color: var(--orange); }
+
+/* ---- MOBILE ---- */
+@media (max-width: 800px) {
+  .main { flex-direction: column-reverse; }
+  .sidebar { width: 100%; min-width: 0; height: 50vh; border-right: none; border-top: 1px solid #ddd; }
+  .map-container { height: 50vh; flex: none; }
+  .detail-panel { width: 100vw; }
+  .header h1 { font-size: 1.1rem; }
+  .filters { padding: 12px 14px; }
+}
+
+/* ---- LOADING ---- */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--earth-pale);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity .5s ease;
+}
+.loading-screen.hidden { opacity: 0; pointer-events: none; }
+.loader {
+  width: 48px; height: 48px;
+  border: 4px solid var(--green-pale);
+  border-top-color: var(--green-mid);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-screen p { margin-top: 16px; color: var(--earth-dark); font-size: .9rem; }
+
+/* scrollbar */
+.results-wrapper::-webkit-scrollbar, .detail-content::-webkit-scrollbar { width: 6px; }
+.results-wrapper::-webkit-scrollbar-track, .detail-content::-webkit-scrollbar-track { background: transparent; }
+.results-wrapper::-webkit-scrollbar-thumb, .detail-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loader"></div>
+  <p>Kajla adatok betoltese...</p>
+</div>
+
+<div class="app">
+  <header class="header">
+    <div class="logo-icon">🐾</div>
+    <div>
+      <h1>Kajla Célpont Kereső</h1>
+      <div class="subtitle">Fedezd fel Magyarország legszebb családi kirándulásait!</div>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="filters">
+        <div class="search-box">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" id="searchInput" placeholder="Keresés név, város, vármegye vagy leírás alapján...">
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-label">Tipus</div>
+          <label class="chip active-green" id="chipTrip" data-type="trip">
+            <span class="dot" style="background:var(--green-mid)"></span> Túrák
+          </label>
+          <label class="chip active-blue" id="chipStamp" data-type="stamp">
+            <span class="dot" style="background:var(--blue)"></span> Pecsételő helyek
+          </label>
+          <label class="chip active-orange" id="chipDiscount" data-type="discount">
+            <span class="dot" style="background:var(--orange)"></span> Kedvezmények
+          </label>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-label">Vármegye</div>
+          <select id="countySelect" class="filter-select">
+            <option value="">Összes vármegye</option>
+          </select>
+        </div>
+
+        <div class="trip-filters" id="tripFilters">
+          <div class="filter-label">Túra szűrők</div>
+          <div class="filter-row" style="gap:12px">
+            <div style="flex:1">
+              <span style="font-size:.78rem;color:#666">Nehézség (max):</span>
+              <div class="difficulty-display">
+                <input type="range" id="difficultySlider" min="1" max="5" value="5" step="1">
+                <span id="difficultyLabel">🐾🐾🐾🐾🐾</span>
+              </div>
+            </div>
+            <div style="flex:1">
+              <span style="font-size:.78rem;color:#666">Max időtartam (óra):</span>
+              <div class="difficulty-display">
+                <input type="range" id="durationSlider" min="1" max="10" value="10" step="1">
+                <span id="durationLabel">10 óra</span>
+              </div>
+            </div>
+          </div>
+          <div class="filter-label" style="margin-top:4px">Szolgáltatások</div>
+          <div class="amenity-toggles" id="amenityToggles">
+            <span class="amenity-chip" data-amenity="toilet">&#128701; WC</span>
+            <span class="amenity-chip" data-amenity="parking">&#127359; Parkoló</span>
+            <span class="amenity-chip" data-amenity="buffet">&#127828; Büfé</span>
+            <span class="amenity-chip" data-amenity="dog_allowed">&#128054; Kutyabarát</span>
+            <span class="amenity-chip" data-amenity="carriage">&#128118; Babakocsival járható</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-count" id="resultCount">Betöltés...</div>
+
+      <div class="results-wrapper" id="resultsWrapper">
+        <div class="results-list" id="resultsList"></div>
+      </div>
+    </aside>
+
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <h2 id="detailTitle"></h2>
+    <button class="detail-close" id="detailClose">&times;</button>
+  </div>
+  <div class="detail-content" id="detailContent"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // State
+  let allItems = [];
+  let filtered = [];
+  let displayCount = 50;
+  let selectedId = null;
+  let map, tripLayer, stampCluster, discountLayer;
+  let markerMap = {};
+
+  // Type toggle state
+  const typeState = { trip: true, stamp: true, discount: true };
+  // Amenity filter state
+  const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
+
+  // DOM refs
+  const $ = id => document.getElementById(id);
+  const searchInput = $('searchInput');
+  const countySelect = $('countySelect');
+  const difficultySlider = $('difficultySlider');
+  const durationSlider = $('durationSlider');
+  const difficultyLabel = $('difficultyLabel');
+  const durationLabel = $('durationLabel');
+  const tripFilters = $('tripFilters');
+  const resultCount = $('resultCount');
+  const resultsList = $('resultsList');
+  const resultsWrapper = $('resultsWrapper');
+  const detailOverlay = $('detailOverlay');
+  const detailPanel = $('detailPanel');
+  const detailTitle = $('detailTitle');
+  const detailContent = $('detailContent');
+  const detailClose = $('detailClose');
+  const loadingScreen = $('loadingScreen');
+
+  // Marker icon factory
+  function makeIcon(color) {
+    return L.divIcon({
+      className: '',
+      html: `<svg width="26" height="36" viewBox="0 0 26 36" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 23 13 23s13-13.25 13-23C26 5.82 20.18 0 13 0z" fill="${color}"/>
+        <circle cx="13" cy="12" r="5.5" fill="#fff" opacity=".9"/>
+      </svg>`,
+      iconSize: [26, 36],
+      iconAnchor: [13, 36],
+      popupAnchor: [0, -34],
+    });
+  }
+  const icons = {
+    trip: makeIcon('#4a8c3f'),
+    stamp: makeIcon('#3a7ec8'),
+    discount: makeIcon('#e8913a'),
+  };
+
+  // Init map
+  function initMap() {
+    map = L.map('map', { zoomControl: true }).setView([47.1625, 19.5033], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map);
+
+    tripLayer = L.layerGroup().addTo(map);
+    stampCluster = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let size = count < 20 ? 'small' : count < 100 ? 'medium' : 'large';
+        const sizes = { small: 36, medium: 44, large: 52 };
+        return L.divIcon({
+          html: `<div style="background:rgba(58,126,200,.85);color:#fff;width:${sizes[size]}px;height:${sizes[size]}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${size==='large'?'14':'12'}px;border:3px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.25)">${count}</div>`,
+          className: '',
+          iconSize: [sizes[size], sizes[size]],
+        });
+      }
+    }).addTo(map);
+    discountLayer = L.layerGroup().addTo(map);
+  }
+
+  // Normalize items
+  function processData(data) {
+    const items = [];
+    const counties = new Set();
+
+    (data.tripsData || []).forEach(t => {
+      if (t.active !== 1 || t.status !== 1) return;
+      const lat = parseFloat(t.lat || t.trip_lat);
+      const lon = parseFloat(t.lon || t.trip_lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      if (t.county) counties.add(t.county);
+      items.push({
+        _type: 'trip',
+        _id: 'trip_' + t.id,
+        _raw: t,
+        name: t.name || t.trip_name || '',
+        city: t.city || '',
+        county: t.county || '',
+        description: t.description || '',
+        longDescription: t.long_description || '',
+        lat, lon,
+        difficulty: parseInt(t.difficulty) || 1,
+        duration: parseFloat(t.duration) || 0,
+        toilet: t.toilet, parking: t.parking, buffet: t.buffet,
+        dog_allowed: t.dog_allowed, carriage: t.carriage,
+        thumb: (t.trip_images && t.trip_images[0]) ? 'https://kajla.hu' + t.trip_images[0].image_src : null,
+      });
+    });
+
+    (data.stampsData || []).forEach(s => {
+      if (s.active !== 1 || s.status !== 1) return;
+      const lat = parseFloat(s.lat);
+      const lon = parseFloat(s.lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      if (s.county) counties.add(s.county);
+      items.push({
+        _type: 'stamp',
+        _id: 'stamp_' + s.id,
+        _raw: s,
+        name: s.name || '',
+        city: s.city || '',
+        county: s.county || '',
+        description: '',
+        longDescription: '',
+        lat, lon,
+      });
+    });
+
+    (data.discountsData || []).forEach(d => {
+      if (d.active !== 1 || d.status !== 1) return;
+      const lat = parseFloat(d.lat);
+      const lon = parseFloat(d.lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      if (d.county) counties.add(d.county);
+      items.push({
+        _type: 'discount',
+        _id: 'discount_' + d.id,
+        _raw: d,
+        name: d.discount_name || '',
+        venue: d.venue || '',
+        city: d.city || '',
+        county: d.county || '',
+        description: d.discount_description || '',
+        longDescription: d.discount_description || '',
+        lat, lon,
+      });
+    });
+
+    // Populate county dropdown
+    const sorted = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
+    sorted.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      countySelect.appendChild(opt);
+    });
+
+    return items;
+  }
+
+  // Search text matching
+  function matchesSearch(item, query) {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (item.name.toLowerCase().includes(q) ||
+            item.city.toLowerCase().includes(q) ||
+            item.county.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q) ||
+            (item.venue && item.venue.toLowerCase().includes(q)));
+  }
+
+  // Filter logic
+  function applyFilters() {
+    const query = searchInput.value.trim();
+    const county = countySelect.value;
+    const maxDiff = parseInt(difficultySlider.value);
+    const maxDur = parseInt(durationSlider.value);
+    const anyAmenity = Object.values(amenityState).some(v => v);
+
+    filtered = allItems.filter(item => {
+      if (!typeState[item._type]) return false;
+      if (!matchesSearch(item, query)) return false;
+      if (county && item.county !== county) return false;
+      if (item._type === 'trip') {
+        if (item.difficulty > maxDiff) return false;
+        if (item.duration > maxDur) return false;
+        if (anyAmenity) {
+          for (const [key, active] of Object.entries(amenityState)) {
+            if (active && !item[key]) return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    displayCount = 50;
+    renderResults();
+    renderMarkers();
+    updateResultCount();
+  }
+
+  function updateResultCount() {
+    resultCount.innerHTML = `<strong>${filtered.length}</strong> találat`;
+  }
+
+  // Render results list
+  function renderResults() {
+    const showing = filtered.slice(0, displayCount);
+    let html = '';
+    showing.forEach(item => {
+      const badgeClass = item._type === 'trip' ? 'badge-trip' : item._type === 'stamp' ? 'badge-stamp' : 'badge-discount';
+      const badgeText = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : 'Kedvezmény';
+      const sel = item._id === selectedId ? ' selected' : '';
+
+      let thumb = '';
+      if (item._type === 'trip' && item.thumb) {
+        thumb = `<img class="card-thumb" src="${item.thumb}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      }
+
+      let venueHtml = '';
+      if (item._type === 'discount' && item.venue) {
+        venueHtml = `<div class="card-venue">${esc(item.venue)}</div>`;
+      }
+
+      let meta = '';
+      if (item._type === 'trip') {
+        const paws = '🐾'.repeat(item.difficulty);
+        meta = `<div class="card-meta"><span>${paws}</span><span>${item.duration} óra</span></div>`;
+      }
+
+      html += `<div class="result-card${sel}" data-id="${item._id}" onclick="window._selectItem('${item._id}')">
+        ${thumb}
+        <div class="card-body">
+          <span class="card-badge ${badgeClass}">${badgeText}</span>
+          <div class="card-name">${esc(item.name)}</div>
+          ${venueHtml}
+          <div class="card-location">${esc(item.city)}${item.county ? ', ' + esc(item.county) : ''}</div>
+          ${meta}
+        </div>
+      </div>`;
+    });
+
+    if (filtered.length > displayCount) {
+      html += `<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (${filtered.length - displayCount} hátra)</button>`;
+    }
+    resultsList.innerHTML = html;
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+  }
+
+  // Render markers on map
+  function renderMarkers() {
+    tripLayer.clearLayers();
+    stampCluster.clearLayers();
+    discountLayer.clearLayers();
+    markerMap = {};
+
+    filtered.forEach(item => {
+      const marker = L.marker([item.lat, item.lon], { icon: icons[item._type] });
+      const typeName = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : 'Kedvezmény';
+      let popupName = item.name;
+      let extra = '';
+      if (item._type === 'discount' && item.venue) {
+        extra = `<div style="font-size:.78rem;color:#666;margin-bottom:2px">${esc(item.venue)}</div>`;
+      }
+      marker.bindPopup(`
+        <div class="popup-name">${esc(popupName)}</div>
+        ${extra}
+        <div class="popup-location">${esc(item.city)}${item.county ? ', ' + esc(item.county) : ''}</div>
+        <button class="popup-btn" onclick="window._showDetail('${item._id}')">Részletek</button>
+      `, { maxWidth: 280 });
+
+      markerMap[item._id] = marker;
+
+      if (item._type === 'trip') tripLayer.addLayer(marker);
+      else if (item._type === 'stamp') stampCluster.addLayer(marker);
+      else discountLayer.addLayer(marker);
+    });
+  }
+
+  // Select an item from the list
+  window._selectItem = function(id) {
+    selectedId = id;
+    // Highlight card
+    document.querySelectorAll('.result-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
+    // Pan map
+    const marker = markerMap[id];
+    if (marker) {
+      if (stampCluster.hasLayer(marker)) {
+        // Stamp markers are inside a cluster group; zoom to reveal, then open popup
+        stampCluster.zoomToShowLayer(marker, function() {
+          setTimeout(() => marker.openPopup(), 200);
+        });
+      } else {
+        // Trip / discount markers are in simple layer groups
+        const ll = marker.getLatLng();
+        map.setView(ll, Math.max(map.getZoom(), 12), { animate: true });
+        setTimeout(() => marker.openPopup(), 350);
+      }
+    }
+  };
+
+  // Load more
+  window._loadMore = function() {
+    displayCount += 50;
+    renderResults();
+  };
+
+  // Show detail panel
+  window._showDetail = function(id) {
+    const item = allItems.find(i => i._id === id);
+    if (!item) return;
+
+    detailTitle.textContent = item.name;
+    let html = '';
+    const raw = item._raw;
+
+    // Images (trips)
+    if (item._type === 'trip' && raw.trip_images && raw.trip_images.length) {
+      html += `<div class="detail-section"><div class="detail-section-title">Képek</div><div class="detail-images">`;
+      raw.trip_images.forEach(img => {
+        const src = img.image_src.startsWith('http') ? img.image_src : 'https://kajla.hu' + img.image_src;
+        html += `<img src="${src}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      });
+      html += `</div></div>`;
+    }
+
+    // Description
+    if (item._type === 'trip' && item.longDescription) {
+      html += `<div class="detail-section"><div class="detail-section-title">Leírás</div><div>${formatDesc(item.longDescription)}</div></div>`;
+    } else if (item._type === 'discount' && item.longDescription) {
+      html += `<div class="detail-section"><div class="detail-section-title">Kedvezmény részletei</div><div>${formatDesc(item.longDescription)}</div></div>`;
+      if (item.venue) {
+        html += `<div class="detail-section"><div class="detail-section-title">Helyszín</div><p>${esc(item.venue)}</p></div>`;
+      }
+    }
+
+    // Address
+    let address = '';
+    if (raw.zip) address += raw.zip + ' ';
+    if (item.city) address += item.city + ', ';
+    if (raw.address) address += raw.address + ' ';
+    if (raw.address_name) address += raw.address_name;
+    if (raw.full_address) address = raw.full_address;
+    if (address) {
+      html += `<div class="detail-section"><div class="detail-section-title">Cím</div><p>${esc(address.trim())}</p></div>`;
+    }
+
+    // County
+    if (item.county) {
+      html += `<div class="detail-section"><div class="detail-section-title">Vármegye</div><p>${esc(item.county)}</p></div>`;
+    }
+
+    // GPS
+    html += `<div class="detail-section"><div class="detail-section-title">GPS koordináták</div><p>${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</p></div>`;
+
+    // Opening hours
+    if (item._type === 'trip') {
+      if (raw.open_hours_trip) {
+        html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás (túra)</div><div>${formatPlain(raw.open_hours_trip)}</div></div>`;
+      }
+      if (raw.open_hours_stamp) {
+        html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás (pecsételő pont)</div><div>${formatDesc(raw.open_hours_stamp)}</div></div>`;
+      }
+    }
+    if (raw.open_hours_text) {
+      html += `<div class="detail-section"><div class="detail-section-title">Nyitvatartás</div><div>${formatPlain(raw.open_hours_text)}</div></div>`;
+    }
+    if (raw.open_hours_link) {
+      html += `<div class="detail-section detail-link"><div class="detail-section-title">Nyitvatartás link</div><a href="${raw.open_hours_link}" target="_blank" rel="noopener">${raw.open_hours_link}</a></div>`;
+    }
+
+    // Amenities (trips)
+    if (item._type === 'trip') {
+      html += `<div class="detail-section"><div class="detail-section-title">Szolgáltatások</div><div class="detail-amenities">`;
+      const amenities = [
+        ['toilet', '&#128701; WC'],
+        ['parking', '&#127359; Parkoló'],
+        ['buffet', '&#127828; Büfé'],
+        ['dog_allowed', '&#128054; Kutyabarát'],
+        ['carriage', '&#128118; Babakocsival járható'],
+      ];
+      amenities.forEach(([key, label]) => {
+        const active = raw[key] ? '' : ' inactive';
+        html += `<span class="detail-amenity${active}">${label}</span>`;
+      });
+      html += `</div></div>`;
+
+      // Difficulty + duration
+      html += `<div class="detail-section"><div class="detail-section-title">Túra adatok</div>
+        <p>Nehézség: ${'🐾'.repeat(item.difficulty)} (${item.difficulty}/5)</p>
+        <p>Időtartam: ${item.duration} óra</p>
+        ${raw.length ? '<p>Táv: ' + esc(raw.length) + '</p>' : ''}
+      </div>`;
+
+      // Video
+      if (raw.video_src) {
+        html += `<div class="detail-section detail-video"><div class="detail-section-title">Videó</div><a href="${raw.video_src}" target="_blank" rel="noopener">&#9654; Videó megtekintése</a></div>`;
+      }
+
+      // Reviews
+      if (raw.trip_reviews && raw.trip_reviews.length) {
+        const visibleReviews = raw.trip_reviews.filter(r => r.review_text && r.visible_trip_page);
+        if (visibleReviews.length) {
+          html += `<div class="detail-section"><div class="detail-section-title">Értékelések</div><div class="detail-reviews">`;
+          visibleReviews.forEach(r => {
+            html += `<div class="review-item"><div class="review-rating">${'&#11088;'.repeat(r.rating)}</div>${esc(r.review_text)}</div>`;
+          });
+          html += `</div></div>`;
+        }
+      }
+    }
+
+    // Discount dates
+    if (item._type === 'discount') {
+      if (raw.discount_date_start || raw.discount_date_end) {
+        html += `<div class="detail-section"><div class="detail-section-title">Érvényes</div><p>${formatDate(raw.discount_date_start)} - ${formatDate(raw.discount_date_end)}</p></div>`;
+      }
+    }
+
+    detailContent.innerHTML = html;
+    detailPanel.classList.add('open');
+    detailOverlay.classList.add('open');
+  };
+
+  function formatDesc(str) {
+    if (!str) return '';
+    // Already contains HTML tags, just fix line breaks
+    return str.replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+  }
+
+  function formatPlain(str) {
+    if (!str) return '';
+    return '<p>' + esc(str.replace(/\r\n/g, '\n')).replace(/\n/g, '<br>') + '</p>';
+  }
+
+  function formatDate(d) {
+    if (!d) return '?';
+    return d.substring(0, 10);
+  }
+
+  // Close detail
+  function closeDetail() {
+    detailPanel.classList.remove('open');
+    detailOverlay.classList.remove('open');
+  }
+  detailClose.addEventListener('click', closeDetail);
+  detailOverlay.addEventListener('click', closeDetail);
+
+  // Type toggles
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const t = chip.dataset.type;
+      typeState[t] = !typeState[t];
+      const colorClass = t === 'trip' ? 'active-green' : t === 'stamp' ? 'active-blue' : 'active-orange';
+      chip.classList.toggle(colorClass, typeState[t]);
+      // Show/hide trip filters
+      const tripsOn = typeState.trip;
+      tripFilters.classList.toggle('visible', tripsOn);
+      applyFilters();
+    });
+  });
+
+  // Amenity toggles
+  document.querySelectorAll('.amenity-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const a = chip.dataset.amenity;
+      amenityState[a] = !amenityState[a];
+      chip.classList.toggle('active', amenityState[a]);
+      applyFilters();
+    });
+  });
+
+  // Search debounce
+  let searchTimer;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 250);
+  });
+
+  // Other filter listeners
+  countySelect.addEventListener('change', applyFilters);
+  difficultySlider.addEventListener('input', () => {
+    difficultyLabel.textContent = '🐾'.repeat(parseInt(difficultySlider.value));
+    applyFilters();
+  });
+  durationSlider.addEventListener('input', () => {
+    durationLabel.textContent = durationSlider.value + ' óra';
+    applyFilters();
+  });
+
+  // Init
+  async function init() {
+    initMap();
+    try {
+      let data;
+      if (window.__KAJLA_DATA__) {
+        data = window.__KAJLA_DATA__;
+      } else {
+        const resp = await fetch('kajla_data.json');
+        data = await resp.json();
+      }
+      allItems = processData(data);
+      tripFilters.classList.add('visible');
+      applyFilters();
+    } catch (e) {
+      resultCount.textContent = 'Hiba történt az adatok betöltésekor.';
+      console.error(e);
+    }
+    loadingScreen.classList.add('hidden');
+    setTimeout(() => { map.invalidateSize(); }, 300);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
