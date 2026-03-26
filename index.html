@@ -1070,6 +1070,11 @@ input[type="range"]::-webkit-slider-thumb {
         filterByMapBounds();
       }
     });
+    map.on('zoomend', function() {
+      if (currentCategory) {
+        filterByMapBounds();
+      }
+    });
   }
 
   function clearMapLayers() {
@@ -1504,15 +1509,20 @@ input[type="range"]::-webkit-slider-thumb {
     filterByMapBounds();
   }
 
-  // Filter the list to only show items visible on the map
+  // Filter the list and markers to only show items visible on the map
   let visibleFiltered = [];
+  let mapBoundsTimer = null;
   function filterByMapBounds() {
     if (!map || !currentCategory) return;
-    const bounds = map.getBounds();
-    visibleFiltered = filtered.filter(item => bounds.contains([item.lat, item.lon]));
-    displayCount = 50;
-    renderResults();
-    updateResultCount();
+    // Debounce to avoid too many re-renders during panning
+    clearTimeout(mapBoundsTimer);
+    mapBoundsTimer = setTimeout(function() {
+      const bounds = map.getBounds();
+      visibleFiltered = filtered.filter(item => bounds.contains([item.lat, item.lon]));
+      displayCount = 50;
+      renderResults();
+      updateResultCount();
+    }, 150);
   }
 
   function updateResultCount() {
