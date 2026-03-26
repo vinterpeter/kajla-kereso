@@ -1674,9 +1674,12 @@ input[type="range"]::-webkit-slider-thumb {
       }
     }
 
-    // Kastélyoknál automatikusan nyissuk meg a részleteket
+    // Kastélyoknál és bringaköröknél automatikusan nyissuk meg a részleteket
     if (currentCategory === 'castles') {
       window._showDetail(id);
+    }
+    if (currentCategory === 'bringa') {
+      showBringaDetail(id);
     }
   };
 
