@@ -738,11 +738,11 @@ input[type="range"]::-webkit-slider-thumb {
       zipMedian[z] = [lats[mid], lons[mid]];
     }
 
-    // Correct coordinates: if >15km from zip median, use zip median instead
+    // Correct coordinates: if >10km from zip median, use zip median instead
     function correctCoords(lat, lon, zip) {
       if (zip && zipMedian[zip]) {
         const [mLat, mLon] = zipMedian[zip];
-        if (distKm(lat, lon, mLat, mLon) > 15) {
+        if (distKm(lat, lon, mLat, mLon) > 10) {
           return { lat: mLat, lon: mLon };
         }
       }
