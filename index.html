@@ -23,6 +23,8 @@
   --orange-light: #fdf0e0;
   --blue: #3a7ec8;
   --blue-light: #e0eef8;
+  --purple: #9b2d86;
+  --purple-light: #f3e0f0;
   --shadow: 0 2px 12px rgba(0,0,0,.12);
   --radius: 10px;
   --transition: .25s ease;
@@ -136,6 +138,7 @@ body {
 .chip.active-green { border-color: var(--green-mid); background: var(--green-pale); color: var(--green-dark); }
 .chip.active-blue { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
 .chip.active-orange { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+.chip.active-purple { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
 
 select.filter-select {
@@ -269,6 +272,7 @@ input[type="range"]::-webkit-slider-thumb {
 .badge-trip { background: var(--green-pale); color: var(--green-dark); }
 .badge-stamp { background: var(--blue-light); color: var(--blue); }
 .badge-discount { background: var(--orange-light); color: var(--orange); }
+.badge-castle { background: var(--purple-light); color: var(--purple); }
 
 .card-name {
   font-size: .9rem;
@@ -544,6 +548,9 @@ input[type="range"]::-webkit-slider-thumb {
           <label class="chip active-orange" id="chipDiscount" data-type="discount">
             <span class="dot" style="background:var(--orange)"></span> Kedvezmények
           </label>
+          <label class="chip active-purple" id="chipCastle" data-type="castle">
+            <span class="dot" style="background:var(--purple)"></span> Várak és kastélyok
+          </label>
         </div>
 
         <div class="filter-row">
@@ -615,11 +622,11 @@ input[type="range"]::-webkit-slider-thumb {
   let filtered = [];
   let displayCount = 50;
   let selectedId = null;
-  let map, tripLayer, stampCluster, discountLayer;
+  let map, tripLayer, stampCluster, discountLayer, castleLayer;
   let markerMap = {};
 
   // Type toggle state
-  const typeState = { trip: true, stamp: true, discount: true };
+  const typeState = { trip: true, stamp: true, discount: true, castle: true };
   // Amenity filter state
   const amenityState = { toilet: false, parking: false, buffet: false, dog_allowed: false, carriage: false };
 
@@ -659,6 +666,7 @@ input[type="range"]::-webkit-slider-thumb {
     trip: makeIcon('#4a8c3f'),
     stamp: makeIcon('#3a7ec8'),
     discount: makeIcon('#e8913a'),
+    castle: makeIcon('#9b2d86'),
   };
 
   // Init map
@@ -686,6 +694,7 @@ input[type="range"]::-webkit-slider-thumb {
       }
     }).addTo(map);
     discountLayer = L.layerGroup().addTo(map);
+    castleLayer = L.layerGroup().addTo(map);
   }
 
   // Normalize items
@@ -815,6 +824,23 @@ input[type="range"]::-webkit-slider-thumb {
       });
     });
 
+    (data.castlesData || []).forEach(c => {
+      const lat = parseFloat(c.lat);
+      const lon = parseFloat(c.lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      items.push({
+        _type: 'castle',
+        _id: 'castle_' + c.id,
+        _raw: c,
+        name: c.name || '',
+        city: c.city || '',
+        county: '',
+        description: '',
+        longDescription: '',
+        lat, lon,
+      });
+    });
+
     // Populate county dropdown
     const sorted = [...counties].sort((a, b) => a.localeCompare(b, 'hu'));
     sorted.forEach(c => {
@@ -877,8 +903,8 @@ input[type="range"]::-webkit-slider-thumb {
     const showing = filtered.slice(0, displayCount);
     let html = '';
     showing.forEach(item => {
-      const badgeClass = item._type === 'trip' ? 'badge-trip' : item._type === 'stamp' ? 'badge-stamp' : 'badge-discount';
-      const badgeText = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : 'Kedvezmény';
+      const badgeClass = item._type === 'trip' ? 'badge-trip' : item._type === 'stamp' ? 'badge-stamp' : item._type === 'castle' ? 'badge-castle' : 'badge-discount';
+      const badgeText = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : item._type === 'castle' ? 'Vár / Kastély' : 'Kedvezmény';
       const sel = item._id === selectedId ? ' selected' : '';
 
       let thumb = '';
@@ -927,11 +953,12 @@ input[type="range"]::-webkit-slider-thumb {
     tripLayer.clearLayers();
     stampCluster.clearLayers();
     discountLayer.clearLayers();
+    castleLayer.clearLayers();
     markerMap = {};
 
     filtered.forEach(item => {
       const marker = L.marker([item.lat, item.lon], { icon: icons[item._type] });
-      const typeName = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : 'Kedvezmény';
+      const typeName = item._type === 'trip' ? 'Túra' : item._type === 'stamp' ? 'Pecsételő hely' : item._type === 'castle' ? 'Vár / Kastély' : 'Kedvezmény';
       let popupName = item.name;
       let extra = '';
       if (item._type === 'discount' && item.venue) {
@@ -948,6 +975,7 @@ input[type="range"]::-webkit-slider-thumb {
 
       if (item._type === 'trip') tripLayer.addLayer(marker);
       else if (item._type === 'stamp') stampCluster.addLayer(marker);
+      else if (item._type === 'castle') castleLayer.addLayer(marker);
       else discountLayer.addLayer(marker);
     });
   }
@@ -989,6 +1017,13 @@ input[type="range"]::-webkit-slider-thumb {
     let html = '';
     const raw = item._raw;
 
+    // Castle popup image
+    if (item._type === 'castle' && raw.popup_image_desktop) {
+      html += `<div class="detail-section"><div class="detail-images">`;
+      html += `<img src="${raw.popup_image_desktop}" alt="${esc(item.name)}" loading="lazy" onerror="this.style.display='none'" style="width:100%;border-radius:8px">`;
+      html += `</div></div>`;
+    }
+
     // Images (trips)
     if (item._type === 'trip' && raw.trip_images && raw.trip_images.length) {
       html += `<div class="detail-section"><div class="detail-section-title">Képek</div><div class="detail-images">`;
@@ -1011,7 +1046,7 @@ input[type="range"]::-webkit-slider-thumb {
 
     // Address
     let address = '';
-    if (raw.zip) address += raw.zip + ' ';
+    if (raw.zip || raw.postal_code) address += (raw.zip || raw.postal_code) + ' ';
     if (item.city) address += item.city + ', ';
     if (raw.address) address += raw.address + ' ';
     if (raw.address_name) address += raw.address_name;
@@ -1126,7 +1161,7 @@ input[type="range"]::-webkit-slider-thumb {
     chip.addEventListener('click', () => {
       const t = chip.dataset.type;
       typeState[t] = !typeState[t];
-      const colorClass = t === 'trip' ? 'active-green' : t === 'stamp' ? 'active-blue' : 'active-orange';
+      const colorClass = t === 'trip' ? 'active-green' : t === 'stamp' ? 'active-blue' : t === 'castle' ? 'active-purple' : 'active-orange';
       chip.classList.toggle(colorClass, typeState[t]);
       // Show/hide trip filters
       const tripsOn = typeState.trip;
