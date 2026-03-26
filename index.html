@@ -906,6 +906,7 @@ input[type="range"]::-webkit-slider-thumb {
   let map, markerLayer, clusterLayer;
   let markerMap = {};
   let mapInitialized = false;
+  let bringaRoutePolyline = null;
 
   // Category-specific filter state
   let filterState = {};
@@ -1359,6 +1360,7 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   function renderAdventureMarkers() {
+    if (bringaRoutePolyline) { map.removeLayer(bringaRoutePolyline); bringaRoutePolyline = null; }
     if (markerLayer) markerLayer.clearLayers();
     markerMap = {};
     if (!filterState.adventureSlug || !filterState.questName) {
@@ -1619,6 +1621,7 @@ input[type="range"]::-webkit-slider-thumb {
     } else if (currentCategory === 'bringa') {
       markerLayer.clearLayers();
       markerMap = {};
+      if (bringaRoutePolyline) { map.removeLayer(bringaRoutePolyline); bringaRoutePolyline = null; }
       filtered.forEach(item => {
         // Main route marker
         const m = L.marker([item.lat, item.lon], { icon: makeIcon(cfg.colorHex) });
@@ -1783,9 +1786,28 @@ input[type="range"]::-webkit-slider-thumb {
     // CASTLES
     if (currentCategory === 'castles') {
       if (raw.popup_image_desktop) {
-        html += '<div class="detail-section"><div class="detail-images">' +
+        html += '<div class="detail-section"><div class="detail-section-title">Infó kártya</div><div class="detail-images">' +
           '<img src="' + raw.popup_image_desktop + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.style.display=\'none\'" style="width:100%;border-radius:8px;grid-column:1/-1">' +
           '</div></div>';
+      }
+      if (raw.popup_text) {
+        // Parse popup_text: split into sections
+        var text = raw.popup_text;
+        // Remove the header (castle name + city) since it's already in the detail title
+        var descMatch = text.indexOf('Leírás');
+        if (descMatch !== -1) {
+          var descText = text.substring(descMatch + 'Leírás'.length).trim();
+          // Split at stamp section
+          var stampIdx = descText.indexOf('HELYSZÍNEN');
+          if (stampIdx === -1) stampIdx = descText.indexOf('PECSÉT');
+          var mainDesc = stampIdx !== -1 ? descText.substring(0, stampIdx).trim() : descText.trim();
+          html += '<div class="detail-section"><div class="detail-section-title">Leírás</div><p style="line-height:1.7">' + esc(mainDesc) + '</p></div>';
+          if (stampIdx !== -1) {
+            html += '<div class="detail-section"><div class="detail-section-title">Pecsételés</div><p style="line-height:1.7;font-size:.85rem;color:#666">A pecsét a helyszínen szerezhető meg.</p></div>';
+          }
+        } else {
+          html += '<div class="detail-section"><div class="detail-section-title">Leírás</div><p style="line-height:1.7">' + esc(text) + '</p></div>';
+        }
       }
       let address = '';
       if (raw.postal_code) address += raw.postal_code + ' ';
@@ -1896,19 +1918,36 @@ input[type="range"]::-webkit-slider-thumb {
 
   function showBringaOnMap(item) {
     const raw = item._raw;
-    // Clear and add route marker + stamp markers
+    // Clear previous layers and polyline
     markerLayer.clearLayers();
     markerMap = {};
+    if (bringaRoutePolyline) {
+      map.removeLayer(bringaRoutePolyline);
+      bringaRoutePolyline = null;
+    }
 
-    // Start marker
-    const startM = L.marker([item.lat, item.lon], { icon: makeIcon('#1a9988') });
+    // Draw route polyline if geometry available
+    if (raw.route_geometry && raw.route_geometry.length > 1) {
+      bringaRoutePolyline = L.polyline(raw.route_geometry, {
+        color: '#1a9988',
+        weight: 4,
+        opacity: 0.8
+      }).addTo(map);
+    }
+
+    // Start marker with distinct style (larger, different color)
+    const startIcon = L.divIcon({
+      className: '',
+      html: '<div style="background:#0d6b5e;border:3px solid #fff;width:18px;height:18px;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    const startM = L.marker([item.lat, item.lon], { icon: startIcon, zIndexOffset: 1000 });
     startM.bindPopup('<div class="popup-name">' + esc(item.name) + '</div><div class="popup-location">Kiindulópont</div>');
     markerLayer.addLayer(startM);
     markerMap[item._id] = startM;
 
-    const bounds = [[item.lat, item.lon]];
-
-    // Stamp locations
+    // Stamp location markers
     if (raw.stamp_locations) {
       raw.stamp_locations.forEach((sl, idx) => {
         if (sl.coordinates && sl.coordinates.lat && sl.coordinates.lng) {
@@ -1918,16 +1957,28 @@ input[type="range"]::-webkit-slider-thumb {
             const sm = L.marker([lat, lng], { icon: makeNumberedIcon('#1a9988', idx + 1) });
             sm.bindPopup('<div class="popup-name">' + esc(sl.name) + '</div><div class="popup-location">Pecsételő hely</div>');
             markerLayer.addLayer(sm);
-            bounds.push([lat, lng]);
           }
         }
       });
     }
 
-    if (bounds.length > 1) {
-      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 13 });
+    // Fit map bounds to polyline (preferred) or markers
+    if (bringaRoutePolyline) {
+      map.fitBounds(bringaRoutePolyline.getBounds(), { padding: [40, 40], maxZoom: 13 });
     } else {
-      map.setView([item.lat, item.lon], 12, { animate: true });
+      const bounds = [[item.lat, item.lon]];
+      if (raw.stamp_locations) {
+        raw.stamp_locations.forEach(sl => {
+          if (sl.coordinates && sl.coordinates.lat && sl.coordinates.lng) {
+            bounds.push([parseFloat(sl.coordinates.lat), parseFloat(sl.coordinates.lng)]);
+          }
+        });
+      }
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 13 });
+      } else {
+        map.setView([item.lat, item.lon], 12, { animate: true });
+      }
     }
   }
 
