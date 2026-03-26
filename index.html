@@ -1803,7 +1803,9 @@ input[type="range"]::-webkit-slider-thumb {
           var mainDesc = stampIdx !== -1 ? descText.substring(0, stampIdx).trim() : descText.trim();
           html += '<div class="detail-section"><div class="detail-section-title">Leírás</div><p style="line-height:1.7">' + esc(mainDesc) + '</p></div>';
           if (stampIdx !== -1) {
-            html += '<div class="detail-section"><div class="detail-section-title">Pecsételés</div><p style="line-height:1.7;font-size:.85rem;color:#666">A pecsét a helyszínen szerezhető meg.</p></div>';
+            html += '<div class="detail-section"><div class="detail-section-title">Pecsét</div>' +
+              (raw.stamp_image ? '<div style="text-align:center;margin:8px 0"><img src="' + raw.stamp_image + '" alt="Pecsét: ' + esc(item.name) + '" style="max-width:200px;border-radius:8px;border:2px solid var(--purple-light)" loading="lazy"></div>' : '') +
+              '<p style="font-size:.82rem;color:#666">A pecsét a helyszínen szerezhető meg.</p></div>';
           }
         } else {
           html += '<div class="detail-section"><div class="detail-section-title">Leírás</div><p style="line-height:1.7">' + esc(text) + '</p></div>';
