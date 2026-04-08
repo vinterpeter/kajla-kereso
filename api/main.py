@@ -9,6 +9,7 @@ from fastapi.responses import PlainTextResponse
 
 from .data import get_categories, get_location, get_locations, load_data
 from .geo import haversine_km, osrm_drive_info
+from .refresh_agent import RefreshAgent
 from .scraper_agent import KajlaAgent
 from .models import (
     CategoriesResponse,
@@ -251,3 +252,44 @@ def agent_refresh():
     """Adatok újratöltése a kajla.hu/ajanlatok-ról."""
     counts = kajla_agent.fetch_all()
     return {"status": "ok", "counts": counts}
+
+
+@app.get("/api/boat-info")
+def boat_info():
+    """MAHART és BAHART hajó információk - ingyenes utazás Kajla útlevéllel."""
+    return {
+        "bahart": {
+            "name": "BAHART - Balatoni Hajózási Zrt.",
+            "url": "https://bahart.hu",
+            "kajla_info_url": "https://bahart.hu/hu/dijmentes-hajos-utazas-kajlaval",
+            "benefit": "6-11 éves Kajla útlevéllel rendelkező diákok ingyenes utazása menetrend szerinti hajókon",
+            "routes": "Települések közötti járatok a Balatonon",
+            "ports": ["Siófok", "Balatonfüred", "Tihany", "Keszthely", "Badacsony", "Fonyód", "Balatonboglár", "Balatonlelle", "Balatonföldvár", "Révfülöp", "Szántód"],
+            "period": "Tavaszi szünet és nyári szezon",
+            "requirements": ["Kajla útlevél (fehér/zöld)", "Diákigazolvány", "6-11 éves kor"],
+        },
+        "mahart": {
+            "name": "MAHART PassNave Kft.",
+            "url": "https://mahartpassnave.hu",
+            "kajla_info_url": "https://mahartpassnave.hu/hu/hirek/kajla-nyar-a-mahart-fedelzeten",
+            "benefit": "Kajla útlevéllel rendelkező gyerekek ingyenes utazása a Dunán",
+            "routes": "Budapest-Szentendre, Visegrádi körjárat, Esztergomi sétahajó",
+            "ports": ["Budapest - Belgrád rakpart", "Szentendre", "Visegrád", "Esztergom"],
+            "period": "Június 21 - augusztus 31",
+            "requirements": ["Kajla útlevél (fehér vagy óvodás)"],
+        },
+    }
+
+
+@app.post("/api/refresh-all")
+def refresh_all_data(save: bool = Query(False, description="Mentse-e a kajla_data.json-t")):
+    """TELJES adatfrissítés minden forrásból (kajla.hu/ajanlatok, aprodok, kalandok, bringakörök).
+
+    Ez újratölti az összes adatot és opcionálisan menti a kajla_data.json fájlba.
+    """
+    agent = RefreshAgent()
+    summary = agent.refresh_all()
+    if save:
+        agent.save()
+        load_data()  # reload API data from fresh JSON
+    return {"status": "ok", "summary": summary, "saved": save, "report": agent.report}

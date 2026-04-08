@@ -1,155 +1,97 @@
 # Kajla Kereso API
 
 A "Hol vagy, Kajla?" turisztikai program helyszineinek API-ja.
+Swagger UI: `/docs`
 
-## Base URL
-
-```
-http://localhost:8080
-```
-
-## Vegpontok
+## Helyszin vegpontok
 
 ### GET /api/categories
-
-Kategoriak listaja darabszamokkal.
-
-**Valasz:**
-```json
-{
-  "categories": [
-    {"key": "trips", "label": "Kajla-korok", "count": 42},
-    {"key": "stamps", "label": "Pecsetelo helyek", "count": 889},
-    {"key": "castles", "label": "Varak es kastelyok", "count": 22},
-    {"key": "adventures", "label": "Kalandok", "count": 298},
-    {"key": "bringa", "label": "Bringakorok", "count": 10}
-  ]
-}
-```
-
----
+Kategoriak darabszamokkal.
 
 ### GET /api/locations
-
 Helyszinek listazasa szurokkel.
-
-**Query parameterek:**
 
 | Parameter | Tipus | Leiras |
 |-----------|-------|--------|
-| `category` | string | Kategoria: `trips`, `stamps`, `castles`, `adventures`, `bringa` |
-| `county` | string | Varmegye neve (reszleges, nem kis-nagybetu erzekeny) |
-| `city` | string | Varos neve (reszleges, nem kis-nagybetu erzekeny) |
-| `search` | string | Szabad szoveges kereses a nev mezoben |
-| `lat` | float | Kozeppont szelesseg (sugar/autos kereshez) |
-| `lon` | float | Kozeppont hosszusag (sugar/autos kereshez) |
-| `radius` | float | Sugar km-ben (`lat` + `lon` szukseges) |
-| `drive_time` | float | Max autos utazasi ido percben (`lat` + `lon` szukseges, OSRM alapu) |
-| `limit` | int | Max elemszam (alapertelmezett: 50, max: 500) |
-| `offset` | int | Eltolas lapozashoz |
+| `category` | string | `trips`, `stamps`, `castles`, `adventures`, `bringa` |
+| `county` | string | Varmegye (reszleges, case-insensitive) |
+| `city` | string | Varos (reszleges, case-insensitive) |
+| `search` | string | Kereses nevben |
+| `lat` | float | Kozeppont szelesseg |
+| `lon` | float | Kozeppont hosszusag |
+| `radius` | float | Sugar km-ben (lat+lon szukseges) |
+| `drive_time` | float | Max autos ut percben (lat+lon szukseges, OSRM) |
+| `limit` | int | Max elemszam (default: 50, max: 500) |
+| `offset` | int | Lapozas |
 
-**Peldak:**
-
-Pecsetelo helyek Baranya varmegyeben:
+Peldak:
 ```
 GET /api/locations?category=stamps&county=baranya
-```
-
-Budapest Keleti kozeleben 5 km-en belul:
-```
 GET /api/locations?lat=47.497&lon=19.083&radius=5
-```
-
-Autoval 30 percen belul elerhetok Egerbol:
-```
-GET /api/locations?lat=47.902&lon=20.377&drive_time=30&category=trips
-```
-
-Kereses nev szerint:
-```
+GET /api/locations?lat=47.902&lon=20.377&drive_time=60&category=trips
 GET /api/locations?search=arboretum
 ```
 
-**Valasz:**
-```json
-{
-  "total": 134,
-  "limit": 50,
-  "offset": 0,
-  "items": [
-    {
-      "id": "stamps-1089",
-      "category": "stamps",
-      "name": "Rendormuzeum",
-      "lat": 47.49834,
-      "lon": 19.083274,
-      "city": "Budapest",
-      "county": "Budapest varmegye",
-      "address": "1087 Budapest, Mosonyi u. 5.",
-      "distance_km": 0.15,
-      "drive_distance_km": null,
-      "drive_duration_min": null
-    }
-  ]
-}
-```
-
-Sugar vagy autos ido kereses eseten az eredmenyek tavolsag/ido szerint rendezettek.
-
----
-
 ### GET /api/locations/{id}
+Egy helyszin reszletes adatai. ID formatum: `trips-19`, `stamps-1089`, `castles-1`, `adventures-liget-1`, `bringa-0`.
 
-Egy helyszin reszletes adatai.
-
-**Pelda:**
-```
-GET /api/locations/castles-1
-```
-
-**Valasz:**
-```json
-{
-  "id": "castles-1",
-  "category": "castles",
-  "name": "Esterhazy-kastely",
-  "lat": 47.6210097,
-  "lon": 16.8706548,
-  "city": "Fertod",
-  "county": "",
-  "address": "9431 Fertod, Joseph Haydn utca 2.",
-  "distance_km": null,
-  "drive_distance_km": null,
-  "drive_duration_min": null,
-  "details": {
-    "id": 1,
-    "name": "Esterhazy-kastely",
-    "popup_image_desktop": "https://kajla.hu/img/kastelyok-es-varak/popup-content/1-castle.png",
-    "...": "..."
-  }
-}
-```
+### GET /api/boat-info
+MAHART es BAHART hajo informaciok (kikotok, kedvezmenyek, idoszakok).
 
 ---
 
-### GET /api/docs
+## Scraper Agent vegpontok (kajla.hu/ajanlatok friss adatai)
 
-Interaktiv Swagger UI dokumentacio.
+### GET /api/agent/stats
+Osszesito statisztikak (darabszamok, szolgaltatasok eloszlasa).
+
+### GET /api/agent/counties
+Elerheto varmegyek listaja.
+
+### GET /api/agent/cities?county=baranya
+Elerheto varosok (opcionalis varmegye szuro).
+
+### GET /api/agent/trips
+Kajla-korok szurese.
+
+| Parameter | Tipus | Leiras |
+|-----------|-------|--------|
+| `county` | string | Varmegye |
+| `city` | string | Varos |
+| `search` | string | Kereses nev/leiras |
+| `max_duration` | float | Max idotartam (ora) |
+| `max_length` | float | Max tav (km) |
+| `max_difficulty` | int | Max nehezseg (1-5) |
+| `parking` | bool | Van parkolo |
+| `toilet` | bool | Van mosdo |
+| `buffet` | bool | Van bufe |
+| `dog_allowed` | bool | Kutyabarat |
+| `carriage` | bool | Babakocsival jarhato |
+| `postcard` | bool | Van kepeslap |
+| `statue` | bool | Van Kajla szobor |
+| `free_only` | bool | Csak ingyenes |
+
+### GET /api/agent/stamps
+Pecsetelo helyek szurese: `county`, `city`, `search`, `postcard`, `museum`.
+
+### GET /api/agent/discounts
+Kedvezmenyek szurese: `county`, `city`, `search`.
+
+### POST /api/agent/refresh
+Adatok ujratolti a kajla.hu/ajanlatok-rol.
+
+### POST /api/refresh-all?save=true
+TELJES adatfrissites minden forrasbol (ajanlatok, aprodok, kalandok, bringakorok, hajo info). `save=true`: menti a kajla_data.json-t.
 
 ---
 
-## ID formatum
+## Adatforrasok
 
-Az ID-k kategoriaval prefixaltak az egyediseg erdekeben:
-- `trips-{id}` - Kajla-korok
-- `stamps-{id}` - Pecsetelo helyek
-- `castles-{id}` - Varak
-- `adventures-{slug}-{station_id}` - Kaland allomas
-- `bringa-{id}` - Bringakorok
-
-## Megjegyzesek
-
-- Az autos ido kereses (`drive_time`) az OSRM nyilvanos routing szolgaltatast hasznalja. Max 200 elemre kerul kiszamitasra teljesitmeny okokbol.
-- A sugar kereses Haversine formulaval szamol (legvonalbeli tavolsag).
-- Az adatok a kajla.hu-rol szarmaznak es a `scrape.py`-vel frissithetok.
-- Az API Swagger UI-ja elerheto a `/docs` vegponton.
+| Forras | URL | Adat |
+|--------|-----|------|
+| Ajanlatok | kajla.hu/ajanlatok | trips (42), stamps (890), discounts (49) |
+| Aprodok | kajla.hu/aprodok | castles (22) |
+| Kalandok | kajla.hu/js/json/{city}-trip-quests.json | adventures (11 konyv, 298 allomas) |
+| Bringakorok | kajla.hu/bringakorok | bringa (10 utvonal, utvonal-geometriaval) |
+| BAHART | bahart.hu | Balatoni hajo info |
+| MAHART | mahartpassnave.hu | Dunai hajo info |
