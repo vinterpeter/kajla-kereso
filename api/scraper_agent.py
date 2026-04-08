@@ -71,6 +71,8 @@ class KajlaAgent:
         buffet: bool | None = None,
         dog_allowed: bool | None = None,
         carriage: bool | None = None,
+        postcard: bool | None = None,
+        statue: bool | None = None,
         free_only: bool = False,
         active_only: bool = True,
     ) -> list[dict]:
@@ -88,6 +90,8 @@ class KajlaAgent:
             buffet: Van-e büfé
             dog_allowed: Kutyabarát-e
             carriage: Babakocsival járható-e
+            postcard: Van-e képeslap a helyszínen
+            statue: Van-e Kajla szobor a helyszínen
             free_only: Csak ingyenesek
             active_only: Csak aktív túrák
         """
@@ -120,6 +124,10 @@ class KajlaAgent:
             if dog_allowed is not None and bool(t.get("dog_allowed")) != dog_allowed:
                 continue
             if carriage is not None and bool(t.get("carriage")) != carriage:
+                continue
+            if postcard is not None and bool(t.get("postcard")) != postcard:
+                continue
+            if statue is not None and bool(t.get("statue")) != statue:
                 continue
             if free_only and t.get("paid", 0) != 0:
                 continue
@@ -231,7 +239,11 @@ class KajlaAgent:
                 "with_buffet": sum(1 for t in active_trips if t.get("buffet")),
                 "dog_friendly": sum(1 for t in active_trips if t.get("dog_allowed")),
                 "stroller_ok": sum(1 for t in active_trips if t.get("carriage")),
+                "with_postcard": sum(1 for t in active_trips if t.get("postcard")),
+                "with_statue": sum(1 for t in active_trips if t.get("statue")),
             },
+            "stamps_with_museum": sum(1 for s in active_stamps if s.get("museum")),
+            "stamps_with_postcard": sum(1 for s in active_stamps if s.get("postcard")),
         }
 
     # ---- Segédfüggvények ----

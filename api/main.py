@@ -195,6 +195,8 @@ def agent_trips(
     buffet: bool | None = Query(None),
     dog_allowed: bool | None = Query(None),
     carriage: bool | None = Query(None),
+    postcard: bool | None = Query(None, description="Van képeslap a helyszínen"),
+    statue: bool | None = Query(None, description="Van Kajla szobor a helyszínen"),
     free_only: bool = Query(False),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -204,7 +206,8 @@ def agent_trips(
         county=county, city=city, search=search,
         max_duration=max_duration, max_length=max_length, max_difficulty=max_difficulty,
         parking=parking, toilet=toilet, buffet=buffet,
-        dog_allowed=dog_allowed, carriage=carriage, free_only=free_only,
+        dog_allowed=dog_allowed, carriage=carriage,
+        postcard=postcard, statue=statue, free_only=free_only,
     )
     total = len(results)
     return {"total": total, "limit": limit, "offset": offset, "items": results[offset:offset + limit]}
