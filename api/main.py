@@ -9,6 +9,7 @@ from fastapi.responses import PlainTextResponse
 
 from .data import get_categories, get_location, get_locations, load_data
 from .geo import haversine_km, osrm_drive_info
+from .scraper_agent import KajlaAgent
 from .models import (
     CategoriesResponse,
     CategoryInfo,
@@ -18,9 +19,13 @@ from .models import (
 )
 
 
+kajla_agent = KajlaAgent()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     load_data()
+    kajla_agent.fetch_all()
     yield
 
 
@@ -155,3 +160,91 @@ def api_docs_md():
     """API dokumentáció markdown formátumban."""
     md_path = Path(__file__).parent / "API.md"
     return md_path.read_text(encoding="utf-8")
+
+
+# =========== SCRAPER AGENT ENDPOINTS ===========
+
+@app.get("/api/agent/stats")
+def agent_stats():
+    """Összesítő statisztikák a kajla.hu/ajanlatok friss adataiból."""
+    return kajla_agent.get_stats()
+
+
+@app.get("/api/agent/counties")
+def agent_counties():
+    """Elérhető vármegyék listája."""
+    return {"counties": kajla_agent.get_counties()}
+
+
+@app.get("/api/agent/cities")
+def agent_cities(county: str | None = Query(None, description="Vármegye szűrő")):
+    """Elérhető városok (opcionálisan vármegyére szűrve)."""
+    return {"cities": kajla_agent.get_cities(county)}
+
+
+@app.get("/api/agent/trips")
+def agent_trips(
+    county: str | None = Query(None),
+    city: str | None = Query(None),
+    search: str | None = Query(None),
+    max_duration: float | None = Query(None, description="Max időtartam (óra)"),
+    max_length: float | None = Query(None, description="Max táv (km)"),
+    max_difficulty: int | None = Query(None, ge=1, le=5, description="Max nehézség (1-5)"),
+    parking: bool | None = Query(None),
+    toilet: bool | None = Query(None),
+    buffet: bool | None = Query(None),
+    dog_allowed: bool | None = Query(None),
+    carriage: bool | None = Query(None),
+    free_only: bool = Query(False),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Kajla-körök szűrése a kajla.hu/ajanlatok friss adataiból."""
+    results = kajla_agent.filter_trips(
+        county=county, city=city, search=search,
+        max_duration=max_duration, max_length=max_length, max_difficulty=max_difficulty,
+        parking=parking, toilet=toilet, buffet=buffet,
+        dog_allowed=dog_allowed, carriage=carriage, free_only=free_only,
+    )
+    total = len(results)
+    return {"total": total, "limit": limit, "offset": offset, "items": results[offset:offset + limit]}
+
+
+@app.get("/api/agent/stamps")
+def agent_stamps(
+    county: str | None = Query(None),
+    city: str | None = Query(None),
+    search: str | None = Query(None),
+    postcard: bool | None = Query(None, description="Képeslapot árul"),
+    museum: bool | None = Query(None, description="Múzeum"),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Pecsételő helyek szűrése a kajla.hu/ajanlatok friss adataiból."""
+    results = kajla_agent.filter_stamps(
+        county=county, city=city, search=search,
+        postcard=postcard, museum=museum,
+    )
+    total = len(results)
+    return {"total": total, "limit": limit, "offset": offset, "items": results[offset:offset + limit]}
+
+
+@app.get("/api/agent/discounts")
+def agent_discounts(
+    county: str | None = Query(None),
+    city: str | None = Query(None),
+    search: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Kedvezmények szűrése a kajla.hu/ajanlatok friss adataiból."""
+    results = kajla_agent.filter_discounts(county=county, city=city, search=search)
+    total = len(results)
+    return {"total": total, "limit": limit, "offset": offset, "items": results[offset:offset + limit]}
+
+
+@app.post("/api/agent/refresh")
+def agent_refresh():
+    """Adatok újratöltése a kajla.hu/ajanlatok-ról."""
+    counts = kajla_agent.fetch_all()
+    return {"status": "ok", "counts": counts}
