@@ -364,6 +364,19 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 1px 4px rgba(0,0,0,.2);
 }
 
+/* All-categories toggle chips */
+.all-cat-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.all-cat-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+  cursor: pointer; border: 2px solid var(--chip-color);
+  background: var(--chip-bg); color: var(--chip-color);
+  transition: all .2s ease; user-select: none;
+}
+.all-cat-chip:not(.active) { background: #f5f5f5; border-color: #ddd; color: #aaa; opacity: .6; }
+.all-cat-chip:not(.active) .all-cat-dot { background: #ccc !important; }
+.all-cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
 /* Quest chips */
 .quest-chip {
   display: inline-flex;
@@ -930,6 +943,12 @@ input[type="range"]::-webkit-slider-thumb {
 
   // Category config
   const CATEGORIES = {
+    all: {
+      icon: "\u{1F30D}", name: "Összes helyszín",
+      desc: "Minden Kajla helyszín egy térképen — színkódolva kategória szerint.",
+      color: '--orange', colorHex: '#e8913a', darkHex: '#b8732e', lightHex: '#fdf0e0',
+      headerGrad: 'linear-gradient(135deg, #b8732e, #e8913a)',
+    },
     trips: {
       icon: "\u{1F97E}", name: "Kajla-körök",
       desc: "42 családbarát túra természetjáró ösvényeken, parkokban és arborétumokban szerte az országban.",
@@ -1103,11 +1122,18 @@ input[type="range"]::-webkit-slider-thumb {
   // =========== STEP 1: CATEGORY SCREEN ===========
   function renderCategoryScreen() {
     let html = '';
-    const catOrder = ['trips', 'bringa', 'adventures', 'castles', 'stamps'];
+    const catOrder = ['all', 'trips', 'bringa', 'adventures', 'castles', 'stamps'];
     catOrder.forEach(key => {
       const cat = CATEGORIES[key];
       let count = 0;
-      if (key === 'trips') count = (rawData.tripsData || []).filter(t => t.active === 1 && t.status === 1).length;
+      if (key === 'all') {
+        count = (rawData.tripsData || []).filter(t => t.active === 1 && t.status === 1).length +
+          (rawData.bringaData || []).length +
+          (rawData.adventuresData || []).reduce((sum, a) => sum + (a.stations || []).length, 0) +
+          (rawData.castlesData || []).length +
+          (rawData.stampsData || []).filter(s => s.active === 1 && s.status === 1).length;
+      }
+      else if (key === 'trips') count = (rawData.tripsData || []).filter(t => t.active === 1 && t.status === 1).length;
       else if (key === 'bringa') count = (rawData.bringaData || []).length;
       else if (key === 'adventures') count = (rawData.adventuresData || []).length;
       else if (key === 'castles') count = (rawData.castlesData || []).length;
@@ -1170,13 +1196,113 @@ input[type="range"]::-webkit-slider-thumb {
       '<span class="cat-title" style="color:' + cfg.colorHex + '">' + cfg.name + '</span>';
 
     // Build filters + items based on category
-    if (cat === 'trips') buildTripsView();
+    if (cat === 'all') buildAllView();
+    else if (cat === 'trips') buildTripsView();
     else if (cat === 'bringa') buildBringaView();
     else if (cat === 'adventures') buildAdventuresView();
     else if (cat === 'castles') buildCastlesView();
     else if (cat === 'stamps') buildStampsView();
 
     setupMobileSidebar();
+  }
+
+  // =========== ALL (combined view) ===========
+  const ALL_CATS = ['trips', 'bringa', 'castles', 'stamps'];
+
+  function buildAllView() {
+    // Load all items from every category
+    (rawData.tripsData || []).forEach(t => {
+      if (t.active !== 1 || t.status !== 1) return;
+      let lat = parseCoord(t.lat || t.trip_lat);
+      let lon = t.trip_lon ? parseCoord(t.trip_lon) : parseLon(t);
+      ({ lat, lon } = correctCoords(lat, lon, t.zip));
+      if (!lat || !lon) return;
+      allItems.push({
+        _id: 'trip_' + t.id, _raw: t, _cat: 'trips',
+        name: t.name || t.trip_name || '', city: t.city || '', county: t.county || '',
+        lat, lon,
+        difficulty: parseInt(t.difficulty) || 1,
+        duration: parseFloat(t.duration) || 0,
+        thumb: (t.trip_images && t.trip_images[0]) ? 'https://kajla.hu' + t.trip_images[0].image_src : null,
+      });
+    });
+
+    (rawData.bringaData || []).forEach((b, idx) => {
+      const lat = b.start_coordinates ? parseFloat(b.start_coordinates.lat) : NaN;
+      const lng = b.start_coordinates ? parseFloat(b.start_coordinates.lng) : NaN;
+      if (isNaN(lat) || isNaN(lng)) return;
+      allItems.push({
+        _id: 'bringa_' + idx, _raw: b, _cat: 'bringa',
+        name: b.title || '', city: '', county: '',
+        lat, lon: lng,
+      });
+    });
+
+    (rawData.castlesData || []).forEach(c => {
+      if (!c.lat || !c.lon) return;
+      allItems.push({
+        _id: 'castle_' + c.id, _raw: c, _cat: 'castles',
+        name: c.name || '', city: c.city || '', county: '',
+        address: c.address || '',
+        lat: c.lat, lon: c.lon,
+      });
+    });
+
+    (rawData.stampsData || []).forEach(s => {
+      if (s.active !== 1 || s.status !== 1) return;
+      let lat = parseCoord(s.lat);
+      let lon = parseLon(s);
+      ({ lat, lon } = correctCoords(lat, lon, s.zip));
+      if (!lat || !lon) return;
+      allItems.push({
+        _id: 'stamp_' + s.id, _raw: s, _cat: 'stamps',
+        name: s.name || '', city: s.city || '', county: s.county || '',
+        lat, lon,
+      });
+    });
+
+    filterState = { search: '', enabledCats: { trips: true, bringa: true, castles: true, stamps: true } };
+
+    let fHtml = '<div class="search-box"><span class="search-icon">&#128269;</span>' +
+      '<input type="text" id="fSearch" placeholder="Keresés név, város alapján..."></div>' +
+      '<div class="filter-label">Kategóriák</div>' +
+      '<div class="all-cat-toggles" id="allCatToggles">';
+    ALL_CATS.forEach(key => {
+      const c = CATEGORIES[key];
+      fHtml += '<span class="all-cat-chip active" data-cat="' + key + '" style="--chip-color:' + c.colorHex + ';--chip-bg:' + c.lightHex + '">' +
+        '<span class="all-cat-dot" style="background:' + c.colorHex + '"></span>' + c.icon + ' ' + c.name + '</span>';
+    });
+    fHtml += '</div>';
+    filtersArea.innerHTML = fHtml;
+
+    let searchTimer;
+    $('fSearch').addEventListener('input', function() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250);
+    });
+
+    document.querySelectorAll('.all-cat-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.cat;
+        filterState.enabledCats[cat] = !filterState.enabledCats[cat];
+        chip.classList.toggle('active', filterState.enabledCats[cat]);
+        applyFiltersAndRender();
+      });
+    });
+
+    clusterLayer = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true });
+    map.addLayer(clusterLayer);
+    applyFiltersAndRender();
+  }
+
+  function filterAll() {
+    const q = (filterState.search || '').toLowerCase();
+    const cats = filterState.enabledCats || {};
+    return allItems.filter(item => {
+      if (!cats[item._cat]) return false;
+      if (q && !item.name.toLowerCase().includes(q) && !item.city.toLowerCase().includes(q) && !(item.county || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
   }
 
   // =========== TRIPS ===========
@@ -1523,7 +1649,8 @@ input[type="range"]::-webkit-slider-thumb {
   function applyFiltersAndRender() {
     displayCount = 50;
 
-    if (currentCategory === 'trips') filtered = filterTrips();
+    if (currentCategory === 'all') filtered = filterAll();
+    else if (currentCategory === 'trips') filtered = filterTrips();
     else if (currentCategory === 'bringa') filtered = filterBringa();
     else if (currentCategory === 'adventures') { filtered = filterAdventures(); renderAdventureResults(); renderAdventureMarkers(); return; }
     else if (currentCategory === 'castles') filtered = filterCastles();
@@ -1572,16 +1699,18 @@ input[type="range"]::-webkit-slider-thumb {
 
     showing.forEach(item => {
       const sel = item._id === selectedId ? ' selected' : '';
-      const borderColor = item._id === selectedId ? cfg.colorHex : 'transparent';
+      const itemCat = item._cat || currentCategory;
+      const itemCfg = CATEGORIES[itemCat];
+      const activeColor = currentCategory === 'all' ? itemCfg.colorHex : cfg.colorHex;
 
       let thumb = '';
-      if (currentCategory === 'trips' && item.thumb) {
+      if ((currentCategory === 'trips' || (currentCategory === 'all' && itemCat === 'trips')) && item.thumb) {
         thumb = '<img class="card-thumb" src="' + item.thumb + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
-      if (currentCategory === 'castles' && item._raw.photo_image) {
+      if ((currentCategory === 'castles' || (currentCategory === 'all' && itemCat === 'castles')) && item._raw.photo_image) {
         thumb = '<img class="card-thumb" src="' + item._raw.photo_image + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
-      if (currentCategory === 'bringa' && item._raw.images && item._raw.images.list) {
+      if ((currentCategory === 'bringa' || (currentCategory === 'all' && itemCat === 'bringa')) && item._raw.images && item._raw.images.list) {
         thumb = '<img class="card-thumb" src="' + item._raw.images.list + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
       }
 
@@ -1596,14 +1725,19 @@ input[type="range"]::-webkit-slider-thumb {
       let locText = '';
       if (item.city) locText = esc(item.city);
       if (item.county) locText += (locText ? ', ' : '') + esc(item.county);
-      if (currentCategory === 'castles' && item.address) {
+      if ((currentCategory === 'castles' || (currentCategory === 'all' && itemCat === 'castles')) && item.address) {
         locText = esc(item.city) + (item.address ? ', ' + esc(item.address) : '');
       }
 
-      html += '<div class="result-card' + sel + '" data-id="' + item._id + '" style="border-left:3px solid ' + (sel ? cfg.colorHex : 'transparent') + '" onclick="window._selectItem(\'' + item._id + '\')">' +
+      // Category badge for "all" view
+      const catBadge = currentCategory === 'all' ?
+        '<span class="card-badge" style="background:' + itemCfg.lightHex + ';color:' + itemCfg.colorHex + '">' + itemCfg.icon + ' ' + itemCfg.name + '</span>' : '';
+
+      html += '<div class="result-card' + sel + '" data-id="' + item._id + '" style="border-left:3px solid ' + (sel ? activeColor : (currentCategory === 'all' ? itemCfg.colorHex : 'transparent')) + '" onclick="window._selectItem(\'' + item._id + '\')">' +
         thumb +
         '<div class="card-body">' +
           '<div class="card-name">' + esc(item.name) + '</div>' +
+          catBadge +
           (locText ? '<div class="card-location">' + locText + '</div>' : '') +
           meta +
         '</div>' +
@@ -1667,6 +1801,26 @@ input[type="range"]::-webkit-slider-thumb {
   function renderMarkers() {
     const cfg = CATEGORIES[currentCategory];
 
+    if (currentCategory === 'all') {
+      clusterLayer.clearLayers();
+      markerMap = {};
+      filtered.forEach(item => {
+        const itemCfg = CATEGORIES[item._cat];
+        const m = L.marker([item.lat, item.lon], { icon: makeIcon(itemCfg.colorHex) });
+        let locLine = esc(item.city);
+        if (item.county) locLine += ', ' + esc(item.county);
+        m.bindPopup(
+          '<div class="popup-name">' + itemCfg.icon + ' ' + esc(item.name) + '</div>' +
+          '<div class="popup-location">' + locLine + '</div>' +
+          '<div style="font-size:.7rem;color:' + itemCfg.colorHex + ';margin-bottom:4px;font-weight:600">' + itemCfg.name + '</div>' +
+          '<button class="popup-btn" style="background:' + itemCfg.colorHex + '" onclick="window._showDetail(\'' + item._id + '\')">Részletek</button>'
+        , { maxWidth: 280 });
+        clusterLayer.addLayer(m);
+        markerMap[item._id] = m;
+      });
+      return;
+    }
+
     if (currentCategory === 'stamps') {
       // Use cluster layer
       clusterLayer.clearLayers();
@@ -1717,11 +1871,15 @@ input[type="range"]::-webkit-slider-thumb {
   // =========== SELECT ITEM ===========
   window._selectItem = function(id) {
     selectedId = id;
+    const selItem = allItems.find(i => i._id === id);
     document.querySelectorAll('.result-card').forEach(c => {
       const isSel = c.dataset.id === id;
       c.classList.toggle('selected', isSel);
-      const cfg = CATEGORIES[currentCategory];
-      c.style.borderLeftColor = isSel ? cfg.colorHex : 'transparent';
+      if (currentCategory === 'all' && selItem && selItem._cat) {
+        c.style.borderLeftColor = isSel ? CATEGORIES[selItem._cat].colorHex : CATEGORIES[(allItems.find(i => i._id === c.dataset.id) || {})._cat || 'all'].colorHex;
+      } else {
+        c.style.borderLeftColor = isSel ? CATEGORIES[currentCategory].colorHex : 'transparent';
+      }
     });
 
     const marker = markerMap[id];
@@ -1738,10 +1896,11 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     // Automatikusan nyissuk meg a részleteket
-    if (currentCategory === 'castles' || currentCategory === 'trips' || currentCategory === 'stamps') {
+    const effectiveCat = currentCategory === 'all' ? (allItems.find(i => i._id === id) || {})._cat : currentCategory;
+    if (effectiveCat === 'castles' || effectiveCat === 'trips' || effectiveCat === 'stamps') {
       window._showDetail(id);
     }
-    if (currentCategory === 'bringa') {
+    if (effectiveCat === 'bringa') {
       showBringaDetail(id);
     }
   };
@@ -1753,19 +1912,21 @@ input[type="range"]::-webkit-slider-thumb {
 
   // =========== SHOW DETAIL PANEL ===========
   window._showDetail = function(id) {
-    const cfg = CATEGORIES[currentCategory];
+    // Determine effective category (for "all" view, use item's own category)
+    const item = filtered.find(i => i._id === id) || allItems.find(i => i._id === id);
+    const effectiveCat = (item && item._cat) ? item._cat : currentCategory;
+    const cfg = CATEGORIES[effectiveCat];
     detailHeader.style.background = cfg.headerGrad;
 
-    if (currentCategory === 'adventures') {
+    if (effectiveCat === 'adventures') {
       showAdventureDetail(id);
       return;
     }
-    if (currentCategory === 'bringa') {
+    if (effectiveCat === 'bringa') {
       showBringaDetail(id);
       return;
     }
 
-    const item = filtered.find(i => i._id === id) || allItems.find(i => i._id === id);
     if (!item) return;
 
     detailTitle.textContent = item.name;
@@ -1781,7 +1942,7 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     // TRIPS
-    if (currentCategory === 'trips') {
+    if (effectiveCat === 'trips') {
       // Images
       if (raw.trip_images && raw.trip_images.length) {
         html += '<div class="detail-section">' + secTitle('Képek') + '<div class="detail-images">';
@@ -1855,7 +2016,7 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     // CASTLES
-    if (currentCategory === 'castles') {
+    if (effectiveCat === 'castles') {
       if (raw.photo_image) {
         html += '<div class="detail-section">' +
           '<img src="' + raw.photo_image + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.style.display=\'none\'" style="width:100%;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.15)">' +
@@ -1893,7 +2054,7 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     // STAMPS
-    if (currentCategory === 'stamps') {
+    if (effectiveCat === 'stamps') {
       let address = raw.full_address || '';
       if (!address) {
         if (raw.zip) address += raw.zip + ' ';
