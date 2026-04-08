@@ -357,10 +357,11 @@ input[type="range"] {
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px; height: 18px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--green-mid);
   cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
 }
 
 /* Quest chips */
@@ -762,17 +763,20 @@ input[type="range"]::-webkit-slider-thumb {
   .sidebar::before {
     content: '';
     display: block;
-    width: 40px; height: 5px;
-    background: #ccc;
+    width: 48px; height: 5px;
+    background: #bbb;
     border-radius: 3px;
-    margin: 10px auto 6px;
+    margin: 14px auto 10px;
     flex-shrink: 0;
+    touch-action: none;
   }
 
   .filters {
     padding: 6px 12px 10px;
     overflow-y: auto;
-    max-height: 40vh;
+    flex-shrink: 1;
+    min-height: 0;
+    max-height: none;
   }
   .filters .search-box { margin-bottom: 8px; }
   .filters .search-box input { padding: 8px 12px 8px 34px; font-size: .82rem; }
@@ -787,8 +791,9 @@ input[type="range"]::-webkit-slider-thumb {
 
   select.filter-select { padding: 5px 8px; font-size: .78rem; }
 
-  .result-count { padding: 5px 12px; font-size: .75rem; }
-  .results-list { padding: 6px 10px; gap: 6px; }
+  .result-count { padding: 5px 12px; font-size: .75rem; flex-shrink: 0; }
+  .results-wrapper { flex: 1; min-height: 60px; }
+  .results-list { padding: 6px 10px 24px; gap: 6px; }
   .result-card { padding: 10px; gap: 8px; }
   .card-thumb { width: 48px; height: 48px; border-radius: 6px; }
   .card-name { font-size: .82rem; }
@@ -807,6 +812,18 @@ input[type="range"]::-webkit-slider-thumb {
   .load-more-btn { padding: 10px; font-size: .8rem; margin: 6px 0 12px; }
 
   .back-btn { padding: 5px 10px; font-size: .78rem; }
+  .leaflet-control-attribution { font-size: 9px !important; }
+}
+
+/* ---- LANDSCAPE MOBILE ---- */
+@media (max-width: 800px) and (orientation: landscape) {
+  .sidebar { height: 50vh; max-height: 80vh; }
+  .detail-panel { width: 60vw; }
+  .detail-header { padding: 8px 14px; }
+  .detail-header h2 { font-size: .85rem; }
+  .detail-content { padding: 10px 14px; }
+  .detail-images img:first-child { grid-column: auto; }
+  .detail-images { grid-template-columns: 1fr 1fr; gap: 4px; }
 }
 
 /* ---- LOADING ---- */
@@ -1196,12 +1213,10 @@ input[type="range"]::-webkit-slider-thumb {
     sortedCounties.forEach(c => { fHtml += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
     fHtml += '</select></div>';
     fHtml += '<div class="filter-row" style="gap:12px"><div style="flex:1">' +
-      '<span style="font-size:.78rem;color:#666">Nehézség (max):</span>' +
-      '<div class="difficulty-display"><input type="range" id="fDiff" min="1" max="5" value="5" step="1">' +
-      '<span id="fDiffLabel">\u{1F43E}\u{1F43E}\u{1F43E}\u{1F43E}\u{1F43E}</span></div></div>' +
-      '<div style="flex:1"><span style="font-size:.78rem;color:#666">Max időtartam (óra):</span>' +
-      '<div class="difficulty-display"><input type="range" id="fDur" min="1" max="10" value="10" step="1">' +
-      '<span id="fDurLabel">10 óra</span></div></div></div>';
+      '<span style="font-size:.78rem;color:#666">Nehézség (max): <strong id="fDiffLabel">5/5</strong></span>' +
+      '<div class="difficulty-display"><input type="range" id="fDiff" min="1" max="5" value="5" step="1"></div></div>' +
+      '<div style="flex:1"><span style="font-size:.78rem;color:#666">Max időtartam: <strong id="fDurLabel">10 óra</strong></span>' +
+      '<div class="difficulty-display"><input type="range" id="fDur" min="1" max="10" value="10" step="1"></div></div></div>';
     fHtml += '<div class="filter-label" style="margin-top:4px">Szolgáltatások</div>' +
       '<div class="amenity-toggles" id="amenityToggles">' +
       '<span class="amenity-chip" data-amenity="toilet">&#128701; WC</span>' +
@@ -1216,7 +1231,7 @@ input[type="range"]::-webkit-slider-thumb {
     let searchTimer;
     $('fSearch').addEventListener('input', function() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { filterState.search = this.value.trim(); applyFiltersAndRender(); }, 250); });
     $('fCounty').addEventListener('change', function() { filterState.county = this.value; applyFiltersAndRender(); });
-    $('fDiff').addEventListener('input', function() { filterState.maxDiff = parseInt(this.value); $('fDiffLabel').textContent = '\u{1F43E}'.repeat(filterState.maxDiff); applyFiltersAndRender(); });
+    $('fDiff').addEventListener('input', function() { filterState.maxDiff = parseInt(this.value); $('fDiffLabel').textContent = this.value + '/5'; applyFiltersAndRender(); });
     $('fDur').addEventListener('input', function() { filterState.maxDur = parseInt(this.value); $('fDurLabel').textContent = this.value + ' óra'; applyFiltersAndRender(); });
     document.querySelectorAll('.amenity-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -1276,6 +1291,8 @@ input[type="range"]::-webkit-slider-thumb {
 
     markerLayer = L.layerGroup().addTo(map);
     applyFiltersAndRender();
+    // Auto-zoom to Balaton area
+    map.fitBounds([[46.65, 17.15], [47.15, 18.35]], { padding: [20, 20] });
   }
 
   function filterBringa() {
@@ -1310,9 +1327,17 @@ input[type="range"]::-webkit-slider-thumb {
     });
 
     markerLayer = L.layerGroup().addTo(map);
-    // Show nothing until adventure + quest selected
-    resultCount.innerHTML = 'Válassz egy kalandkönyvet a listából.';
-    resultsList.innerHTML = '';
+    // Auto-select first adventure
+    const advSelect = $('fAdvSelect');
+    if (adventures.length > 0) {
+      advSelect.value = adventures[0].unique_slug || adventures[0].slug;
+      filterState.adventureSlug = advSelect.value;
+      buildAdventureQuestChips();
+      applyFiltersAndRender();
+    } else {
+      resultCount.innerHTML = 'Válassz egy kalandkönyvet a listából.';
+      resultsList.innerHTML = '';
+    }
     renderAdventureMarkers();
   }
 
@@ -1529,8 +1554,14 @@ input[type="range"]::-webkit-slider-thumb {
     const cfg = CATEGORIES[currentCategory];
     const total = visibleFiltered.length;
     const all = filtered.length;
-    const extra = total < all ? ' <span style="font-size:.75rem;color:#999">(térképen ' + total + ' / összesen ' + all + ')</span>' : '';
-    resultCount.innerHTML = '<strong style="color:' + cfg.colorHex + '">' + total + '</strong> találat' + extra;
+    let countHtml;
+    if (total < all) {
+      countHtml = '<strong style="color:' + cfg.colorHex + '">' + total + '</strong> találat a látható területen' +
+        ' <span style="font-size:.72rem;color:#999">(összesen ' + all + ' — nagyítsd ki a térképet a többihez)</span>';
+    } else {
+      countHtml = '<strong style="color:' + cfg.colorHex + '">' + total + '</strong> találat';
+    }
+    resultCount.innerHTML = countHtml;
   }
 
   // =========== RENDER RESULTS (generic) ===========
@@ -1581,6 +1612,9 @@ input[type="range"]::-webkit-slider-thumb {
 
     if (visibleFiltered.length > displayCount) {
       html += '<button class="load-more-btn" onclick="window._loadMore()">Mutass többet (' + (visibleFiltered.length - displayCount) + ' hátra)</button>';
+    }
+    if (showing.length > 20) {
+      html += '<button class="load-more-btn" onclick="document.getElementById(\'resultsWrapper\').scrollTo({top:0,behavior:\'smooth\'})" style="opacity:.7;font-size:.75rem">&#9650; Vissza a tetejére</button>';
     }
     resultsList.innerHTML = html;
   }
