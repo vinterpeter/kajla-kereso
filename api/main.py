@@ -1,0 +1,157 @@
+"""Kajla Kereső API - FastAPI application."""
+
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
+
+from .data import get_categories, get_location, get_locations, load_data
+from .geo import haversine_km, osrm_drive_info
+from .models import (
+    CategoriesResponse,
+    CategoryInfo,
+    LocationDetail,
+    LocationListResponse,
+    LocationSummary,
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_data()
+    yield
+
+
+app = FastAPI(
+    title="Kajla Kereső API",
+    description="API a Kajla családbarát turisztikai program helyszíneihez",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://vinterpeter.github.io",
+        "http://localhost:8765",
+        "http://localhost:8000",
+        "http://127.0.0.1:8765",
+    ],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/api/locations", response_model=LocationListResponse)
+def list_locations(
+    category: str | None = Query(None, description="Kategória: trips, stamps, castles, adventures, bringa"),
+    county: str | None = Query(None, description="Vármegye neve (részleges, nem kis-nagybetű érzékeny)"),
+    city: str | None = Query(None, description="Város neve (részleges, nem kis-nagybetű érzékeny)"),
+    search: str | None = Query(None, description="Szabad szöveges keresés a név mezőben"),
+    lat: float | None = Query(None, description="Középpont szélesség (sugár kereséshez)"),
+    lon: float | None = Query(None, description="Középpont hosszúság (sugár kereséshez)"),
+    radius: float | None = Query(None, description="Sugár km-ben (lat + lon szükséges)"),
+    drive_time: float | None = Query(None, description="Max autós utazási idő percben (lat + lon szükséges, OSRM alapú)"),
+    limit: int = Query(50, ge=1, le=500, description="Max elemszám"),
+    offset: int = Query(0, ge=0, description="Eltolás (lapozáshoz)"),
+):
+    """Helyszínek listázása szűrőkkel. Sugár/autós idő kereséshez lat + lon szükséges."""
+
+    # Validate geo search params
+    has_origin = lat is not None and lon is not None
+    radius_search = has_origin and radius is not None
+    drive_search = has_origin and drive_time is not None
+
+    if (radius is not None or drive_time is not None) and not has_origin:
+        raise HTTPException(
+            status_code=400,
+            detail="Sugár/autós idő kereséshez lat és lon együtt szükséges",
+        )
+
+    # Pre-filter by radius (Haversine) to limit OSRM calls
+    max_radius = radius if radius else (drive_time * 2.5 if drive_time else None)
+
+    results = []
+    for loc in get_locations():
+        if category and loc["category"] != category:
+            continue
+        if county and county.lower() not in loc["county"].lower():
+            continue
+        if city and city.lower() not in loc["city"].lower():
+            continue
+        if search and search.lower() not in loc["name"].lower():
+            continue
+
+        dist = None
+        if has_origin:
+            dist = haversine_km(lat, lon, loc["lat"], loc["lon"])
+            if max_radius and dist > max_radius:
+                continue
+
+        if radius_search and dist is not None and dist > radius:
+            continue
+
+        item = LocationSummary(
+            id=loc["id"],
+            category=loc["category"],
+            name=loc["name"],
+            lat=loc["lat"],
+            lon=loc["lon"],
+            city=loc["city"],
+            county=loc["county"],
+            address=loc["address"],
+            distance_km=round(dist, 2) if dist is not None else None,
+        )
+        results.append(item)
+
+    # OSRM drive time enrichment (only for manageable result sets)
+    if drive_search and len(results) <= 200:
+        enriched = []
+        for item in results:
+            info = osrm_drive_info(lat, lon, item.lat, item.lon)
+            if info:
+                item.drive_distance_km = info["distance_km"]
+                item.drive_duration_min = info["duration_min"]
+                if item.drive_duration_min <= drive_time:
+                    enriched.append(item)
+            # If OSRM fails, skip the item in drive_time mode
+        results = enriched
+
+    # Sort
+    if drive_search:
+        results.sort(key=lambda x: x.drive_duration_min or 0)
+    elif has_origin:
+        results.sort(key=lambda x: x.distance_km or 0)
+    else:
+        results.sort(key=lambda x: x.name)
+
+    total = len(results)
+    page = results[offset : offset + limit]
+
+    return LocationListResponse(total=total, limit=limit, offset=offset, items=page)
+
+
+@app.get("/api/locations/{location_id}", response_model=LocationDetail)
+def get_location_detail(location_id: str):
+    """Egy helyszín részletes adatai."""
+    loc = get_location(location_id)
+    if not loc:
+        raise HTTPException(status_code=404, detail="Helyszín nem található")
+    return LocationDetail(**loc)
+
+
+@app.get("/api/categories", response_model=CategoriesResponse)
+def list_categories():
+    """Kategóriák listája darabszámokkal."""
+    return CategoriesResponse(
+        categories=[CategoryInfo(**c) for c in get_categories()]
+    )
+
+
+@app.get("/api/docs.md", response_class=PlainTextResponse, include_in_schema=False)
+def api_docs_md():
+    """API dokumentáció markdown formátumban."""
+    md_path = Path(__file__).parent / "API.md"
+    return md_path.read_text(encoding="utf-8")
